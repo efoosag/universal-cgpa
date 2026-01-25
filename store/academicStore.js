@@ -48,7 +48,7 @@ export const useAcademicStore = create(
                     },
                   ],
                 }
-              : year
+              : year,
           ),
         })),
 
@@ -58,11 +58,9 @@ export const useAcademicStore = create(
             year.id === yearId
               ? {
                   ...year,
-                  semesters: year.semesters.filter(
-                    (s) => s.id !== semesterId
-                  ),
+                  semesters: year.semesters.filter((s) => s.id !== semesterId),
                 }
-              : year
+              : year,
           ),
         })),
 
@@ -89,10 +87,31 @@ export const useAcademicStore = create(
                             },
                           ],
                         }
-                      : sem
+                      : sem,
                   ),
                 }
-              : year
+              : year,
+          ),
+        })),
+
+      editCourse: (yearId, semesterId, courseId, updatedCourse) =>
+        set((state) => ({
+          years: state.years.map((year) =>
+            year.id === yearId
+              ? {
+                  ...year,
+                  semesters: year.semesters.map((sem) =>
+                    sem.id === semesterId
+                      ? {
+                          ...sem,
+                          courses: sem.courses.map((c) =>
+                            c.id === courseId ? { ...c, ...updatedCourse } : c,
+                          ),
+                        }
+                      : sem,
+                  ),
+                }
+              : year,
           ),
         })),
 
@@ -106,14 +125,12 @@ export const useAcademicStore = create(
                     sem.id === semesterId
                       ? {
                           ...sem,
-                          courses: sem.courses.filter(
-                            (c) => c.id !== courseId
-                          ),
+                          courses: sem.courses.filter((c) => c.id !== courseId),
                         }
-                      : sem
+                      : sem,
                   ),
                 }
-              : year
+              : year,
           ),
         })),
 
@@ -123,6 +140,6 @@ export const useAcademicStore = create(
     {
       name: "universal-cgpa-storage",
       version: 1,
-    }
-  )
+    },
+  ),
 );
