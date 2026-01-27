@@ -32,17 +32,15 @@ export default function Dashboard() {
   const [deleteCourseModalOpen, setDeleteCourseModalOpen] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState(null);
   const [editProfileModalOpen, setEditProfileModalOpen] = useState(false);
-
   const [expandedSemesters, setExpandedSemesters] = useState({});
   const [showAcademicYears, setShowAcademicYears] = useState(false);
 
-  // ===== Filter states =====
   const [filterYear, setFilterYear] = useState("");
   const [filterSemester, setFilterSemester] = useState("");
 
   const safeYears = Array.isArray(years) ? years : [];
 
-  // ✅ Correct grading scale extraction
+  // Extract grading scale
   const gradingScaleFull =
     GRADING_SCALES[profile?.gradingScaleId] || GRADING_SCALES["ng-5"];
   const { label: gradingLabel, ...gradingScale } = gradingScaleFull;
@@ -63,29 +61,32 @@ export default function Dashboard() {
     }
   }, [isInitialized, profile, years.length, initializeAcademicStructure]);
 
-  // Redirect to onboarding if not initialized
+  // Redirect if onboarding not complete
   useEffect(() => {
     if (!hasHydrated) return;
     if (!isInitialized) router.replace("/onboarding");
   }, [isInitialized, router, hasHydrated]);
 
-  if (!hasHydrated) return <div className="p-6">Loading dashboard…</div>;
+  if (!hasHydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-600">
+        Loading dashboard…
+      </div>
+    );
+  }
 
-  const toggleSemester = (semesterId) => {
+  const toggleSemester = (semesterId) =>
     setExpandedSemesters((prev) => ({
       ...prev,
       [semesterId]: !prev[semesterId],
     }));
-  };
 
-  // ===== Extract unique semesters for filter =====
   const semesterOptions = Array.from(
     new Set(
       safeYears.flatMap((year) => year.semesters.map((s) => s.title))
     )
   );
 
-  // ===== Filtered courses for table =====
   const filteredCourses = safeYears
     .filter((y) => !filterYear || y.title === filterYear)
     .flatMap((year) =>
@@ -101,15 +102,18 @@ export default function Dashboard() {
     );
 
   return (
-    <div className="p-6 space-y-6">
-      {/* ===== CGPA SUMMARY ===== */}
-      <div className="border rounded p-4">
-        <h2 className="text-lg font-semibold">Cumulative GPA</h2>
-        <p className="text-3xl font-bold mt-2">{cgpa}</p>
-        <p className="text-sm text-muted-foreground">Grading Scale: {gradingLabel}</p>
+    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-slate-100 p-6 space-y-6">
+      {/* CGPA SUMMARY */}
+      <div className="rounded-2xl shadow-md border border-slate-200 p-6 bg-white flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">Cumulative GPA</h2>
+          <p className="text-4xl font-bold text-blue-600 mt-2">{cgpa}</p>
+          <p className="text-sm text-slate-500 mt-1">Grading Scale: {gradingLabel}</p>
+        </div>
         <Button
           size="sm"
           variant="outline"
+          className="self-start md:self-auto"
           onClick={() => setEditProfileModalOpen(true)}
         >
           Edit Profile
@@ -120,12 +124,14 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* ===== Additional Panels ===== */}
-      <WhatIfPanel gradingScale={gradingScale} years={safeYears} />
-      <TargetCGPAPlanner gradingScale={gradingScale} years={safeYears} />
+      {/* PANELS */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <WhatIfPanel gradingScale={gradingScale} years={safeYears} />
+        <TargetCGPAPlanner gradingScale={gradingScale} years={safeYears} />
+      </div>
 
-      {/* ===== Filter Component ===== */}
-      <div className="flex gap-4 items-center border rounded p-4">
+      {/* FILTERS */}
+      <div className="flex flex-col md:flex-row gap-4 items-center border rounded p-4 bg-white shadow-sm">
         <Select
           value={filterYear}
           onValueChange={setFilterYear}
@@ -153,17 +159,17 @@ export default function Dashboard() {
         </Select>
       </div>
 
-      {/* ===== COURSES OVERVIEW TABLE ===== */}
-      <div className="border rounded p-4">
-        <h2 className="text-lg font-semibold mb-2">All Courses Overview</h2>
+      {/* COURSES TABLE */}
+      <div className="rounded-2xl border border-slate-200 p-4 bg-white shadow-sm">
+        <h2 className="text-lg font-semibold mb-2 text-slate-900">All Courses Overview</h2>
         {safeYears.length === 0 ? (
-          <p className="text-muted-foreground">No courses added yet.</p>
+          <p className="text-slate-500">No courses added yet.</p>
         ) : filteredCourses.length === 0 ? (
-          <p className="text-muted-foreground">No courses match the current filter.</p>
+          <p className="text-slate-500">No courses match the current filter.</p>
         ) : (
           <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-100">
+            <thead className="bg-blue-50 text-slate-900">
+              <tr>
                 <th className="border p-2 text-left">Year</th>
                 <th className="border p-2 text-left">Semester</th>
                 <th className="border p-2 text-left">Course</th>
@@ -173,7 +179,7 @@ export default function Dashboard() {
             </thead>
             <tbody>
               {filteredCourses.map((course) => (
-                <tr key={course.id} className="hover:bg-gray-50">
+                <tr key={course.id} className="hover:bg-blue-50">
                   <td className="border p-2">{course.year}</td>
                   <td className="border p-2">{course.semester}</td>
                   <td className="border p-2">{course.name}</td>
@@ -186,7 +192,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ===== TOGGLE ACADEMIC YEARS BUTTON ===== */}
+      {/* ACADEMIC YEARS COLLAPSIBLE */}
       <Button
         className="w-full"
         variant="outline"
@@ -195,12 +201,16 @@ export default function Dashboard() {
         {showAcademicYears ? "Hide Academic Years" : "Show Academic Years"}
       </Button>
 
-      {/* ===== ACADEMIC YEARS COLLAPSIBLE ===== */}
       {showAcademicYears && (
         <div className="space-y-4">
           {safeYears.map((year) => (
-            <details key={year.id} className="border rounded p-3">
-              <summary className="cursor-pointer font-semibold">{year.title}</summary>
+            <details
+              key={year.id}
+              className="rounded-2xl border border-slate-200 p-4 bg-white shadow-sm"
+            >
+              <summary className="cursor-pointer font-semibold text-slate-900">
+                {year.title}
+              </summary>
 
               {year.semesters.map((semester) => {
                 const semesterGPA = calculateSemesterGPA(semester, gradingScale);
@@ -209,10 +219,12 @@ export default function Dashboard() {
                 return (
                   <div
                     key={semester.id}
-                    className="ml-4 border-l pl-4 mt-2 p-2 bg-gray-50 rounded"
+                    className="ml-4 border-l pl-4 mt-2 p-2 bg-blue-50 rounded"
                   >
                     <div className="flex justify-between items-center mb-2">
-                      <span>{semester.title} (GPA: {semesterGPA})</span>
+                      <span className="text-slate-900">
+                        {semester.title} (GPA: {semesterGPA})
+                      </span>
                       <Button size="xs" onClick={() => toggleSemester(semester.id)}>
                         {isExpanded ? "Hide Courses" : "Show Courses"}
                       </Button>
@@ -277,7 +289,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ===== DELETE COURSE MODAL ===== */}
+      {/* DELETE & EDIT MODALS */}
       {courseToDelete && (
         <ConfirmModal
           open={deleteCourseModalOpen}
@@ -295,7 +307,6 @@ export default function Dashboard() {
         />
       )}
 
-      {/* ===== EDIT COURSE MODAL ===== */}
       {editingCourse && (
         <EditCourseModal
           open={editCourseModalOpen}
@@ -312,6 +323,6 @@ export default function Dashboard() {
           }}
         />
       )}
-    </div>
+    </main>
   );
 }
