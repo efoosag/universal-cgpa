@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAcademicStore } from "@/store/academicStore";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { GRADING_SCALES } from "@/lib/grading";
 
 export default function EditProfileModal({ open, onOpenChange }) {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function EditProfileModal({ open, onOpenChange }) {
     profile?.semestersPerYear !== form.semestersPerYear;
 
   const saveProfile = () => {
-    editProfile(form);
+    editProfile({ ...form, gradingScaleId: form.gradingScaleId || "ng-5" });
     setShowWarning(false);
     onOpenChange(false);
     if (structureChanged) router.refresh();
@@ -55,9 +56,10 @@ export default function EditProfileModal({ open, onOpenChange }) {
 
         <input
           type="number"
-          value={form.programYears || 0}
+          min={1}
+          value={form.programYears || 1}
           onChange={(e) =>
-            setForm({ ...form, programYears: Number(e.target.value) })
+            setForm({ ...form, programYears: Math.max(1, Number(e.target.value)) })
           }
           placeholder="Program Years"
           className="w-full border rounded p-2"
@@ -65,26 +67,33 @@ export default function EditProfileModal({ open, onOpenChange }) {
 
         <input
           type="number"
-          value={form.semestersPerYear || 0}
+          min={2}
+          max={3}
+          value={form.semestersPerYear || 2}
           onChange={(e) =>
-            setForm({ ...form, semestersPerYear: Number(e.target.value) })
+            setForm({
+              ...form,
+              semestersPerYear: Math.min(3, Math.max(2, Number(e.target.value))),
+            })
           }
-          placeholder="Semesters per Year"
+          placeholder="Semesters per Year (2 or 3)"
           className="w-full border rounded p-2"
         />
 
-        {/* ✅ Grading Scale */}
+        {/* Grading Scale */}
+        <p className="text-xs text-muted-foreground">
+          Changing grading scale recalculates GPA but does not delete courses.
+        </p>
         <select
-          value={form.gradingScale || "ng-5"}
-          onChange={(e) =>
-            setForm({ ...form, gradingScale: e.target.value })
-          }
+          value={form.gradingScaleId || "ng-5"}
+          onChange={(e) => setForm({ ...form, gradingScaleId: e.target.value })}
           className="w-full border rounded p-2"
         >
-          <option value="ng-5">Nigeria (5.0)</option>
-          <option value="ng-4">Nigeria (4.0)</option>
-          <option value="us-4">USA (4.0)</option>
-          <option value="uk">UK</option>
+          {Object.entries(GRADING_SCALES).map(([key, scale]) => (
+            <option key={key} value={key}>
+              {scale.label}
+            </option>
+          ))}
         </select>
 
         {showWarning && (
@@ -107,9 +116,7 @@ export default function EditProfileModal({ open, onOpenChange }) {
         {!showWarning && (
           <Button
             className="w-full"
-            onClick={() =>
-              structureChanged ? setShowWarning(true) : saveProfile()
-            }
+            onClick={() => (structureChanged ? setShowWarning(true) : saveProfile())}
           >
             Save Profile
           </Button>

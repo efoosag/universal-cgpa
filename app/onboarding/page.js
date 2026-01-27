@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAcademicStore } from "@/store/academicStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { GRADING_SCALES } from "@/lib/grading"; // Make sure this file exports an object
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -14,17 +15,20 @@ export default function OnboardingPage() {
     country: "",
     university: "",
     program: "",
-    programYears: 4,
-    semestersPerYear: 2,
+    programYears: 0,
+    semestersPerYear: 2, // default
+    gradingScaleId: "ng-5", // default
   });
 
   function handleSubmit() {
-    setProfile(form);
+    // Basic validation
+    if (!form.country || !form.university || !form.program || form.programYears <= 0) {
+      alert("Please fill all required fields correctly!");
+      return;
+    }
 
-    initializeAcademicStructure(
-      form.programYears,
-      form.semestersPerYear
-    );
+    setProfile(form);
+    initializeAcademicStructure(form.programYears, form.semestersPerYear);
 
     router.push("/dashboard");
   }
@@ -34,42 +38,56 @@ export default function OnboardingPage() {
       <h1 className="text-2xl font-semibold">Academic Setup</h1>
 
       <Input
-        placeholder="Country"
+        placeholder="Enter your country"
         value={form.country}
         onChange={(e) => setForm({ ...form, country: e.target.value })}
       />
 
       <Input
-        placeholder="University"
+        placeholder="Enter your university"
         value={form.university}
         onChange={(e) => setForm({ ...form, university: e.target.value })}
       />
 
       <Input
-        placeholder="Program"
+        placeholder="Enter your program"
         value={form.program}
         onChange={(e) => setForm({ ...form, program: e.target.value })}
       />
 
       <Input
         type="number"
-        placeholder="Program Duration (years)"
-        value={form.programYears}
+        placeholder="Program duration (years)"
+        value={form.programYears || ""}
         onChange={(e) =>
           setForm({ ...form, programYears: Number(e.target.value) })
         }
       />
 
-      <Input
-        type="number"
-        placeholder="Semesters per year (2 or 3)"
+      {/* Semesters per year dropdown: only 2 or 3 */}
+      <select
         value={form.semestersPerYear}
-        onChange={(e) =>
-          setForm({ ...form, semestersPerYear: Number(e.target.value) })
-        }
-      />
+        onChange={(e) => setForm({ ...form, semestersPerYear: Number(e.target.value) })}
+        className="w-full border rounded p-2"
+      >
+        <option value={2}>2 Semesters per year</option>
+        <option value={3}>3 Semesters per year</option>
+      </select>
 
-      <Button className="w-full" onClick={handleSubmit}>
+      {/* Grading scale dropdown */}
+      <select
+        value={form.gradingScaleId}
+        onChange={(e) => setForm({ ...form, gradingScaleId: e.target.value })}
+        className="w-full border rounded p-2"
+      >
+        {Object.entries(GRADING_SCALES).map(([key, scale]) => (
+          <option key={key} value={key}>
+            {scale.label}
+          </option>
+        ))}
+      </select>
+
+      <Button className="w-full mt-2" onClick={handleSubmit}>
         Continue to Dashboard
       </Button>
     </div>

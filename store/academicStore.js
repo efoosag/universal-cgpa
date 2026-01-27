@@ -37,8 +37,13 @@ export const useAcademicStore = create(
           return {
             profile: {
               ...oldProfile,
-              ...newProfile, // includes gradingScale
+              ...newProfile,
+              gradingScaleId:
+                newProfile.gradingScaleId ??
+                oldProfile.gradingScaleId ??
+                "ng-5",
             },
+
             years: structureChanged ? [] : state.years,
             isInitialized: true,
           };
@@ -90,10 +95,10 @@ export const useAcademicStore = create(
                             },
                           ],
                         }
-                      : sem
+                      : sem,
                   ),
                 }
-              : year
+              : year,
           ),
         })),
 
@@ -108,13 +113,13 @@ export const useAcademicStore = create(
                       ? {
                           ...sem,
                           courses: sem.courses.map((c) =>
-                            c.id === courseId ? { ...c, ...updatedCourse } : c
+                            c.id === courseId ? { ...c, ...updatedCourse } : c,
                           ),
                         }
-                      : sem
+                      : sem,
                   ),
                 }
-              : year
+              : year,
           ),
         })),
 
@@ -128,14 +133,12 @@ export const useAcademicStore = create(
                     sem.id === semesterId
                       ? {
                           ...sem,
-                          courses: sem.courses.filter(
-                            (c) => c.id !== courseId
-                          ),
+                          courses: sem.courses.filter((c) => c.id !== courseId),
                         }
-                      : sem
+                      : sem,
                   ),
                 }
-              : year
+              : year,
           ),
         })),
     }),
@@ -145,6 +148,6 @@ export const useAcademicStore = create(
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated();
       },
-    }
-  )
+    },
+  ),
 );
