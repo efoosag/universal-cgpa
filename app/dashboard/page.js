@@ -16,7 +16,6 @@ import { Select } from "@/components/ui/select";
 
 export default function Dashboard() {
   const router = useRouter();
-
   const {
     isInitialized,
     hasHydrated,
@@ -42,8 +41,13 @@ export default function Dashboard() {
   const [filterSemester, setFilterSemester] = useState("");
 
   const safeYears = Array.isArray(years) ? years : [];
-  const gradingScale =
+
+  // ✅ Correct grading scale extraction
+  const gradingScaleFull =
     GRADING_SCALES[profile?.gradingScaleId] || GRADING_SCALES["ng-5"];
+  const { label: gradingLabel, ...gradingScale } = gradingScaleFull;
+
+  // CGPA calculation
   const cgpa = calculateCGPA(safeYears, gradingScale);
 
   // Auto initialize academic structure
@@ -55,10 +59,7 @@ export default function Dashboard() {
       profile.programYears &&
       profile.semestersPerYear
     ) {
-      initializeAcademicStructure(
-        profile.programYears,
-        profile.semestersPerYear
-      );
+      initializeAcademicStructure(profile.programYears, profile.semestersPerYear);
     }
   }, [isInitialized, profile, years.length, initializeAcademicStructure]);
 
@@ -105,6 +106,7 @@ export default function Dashboard() {
       <div className="border rounded p-4">
         <h2 className="text-lg font-semibold">Cumulative GPA</h2>
         <p className="text-3xl font-bold mt-2">{cgpa}</p>
+        <p className="text-sm text-muted-foreground">Grading Scale: {gradingLabel}</p>
         <Button
           size="sm"
           variant="outline"
@@ -119,8 +121,8 @@ export default function Dashboard() {
       </div>
 
       {/* ===== Additional Panels ===== */}
-      <WhatIfPanel />
-      <TargetCGPAPlanner />
+      <WhatIfPanel gradingScale={gradingScale} years={safeYears} />
+      <TargetCGPAPlanner gradingScale={gradingScale} years={safeYears} />
 
       {/* ===== Filter Component ===== */}
       <div className="flex gap-4 items-center border rounded p-4">
@@ -157,9 +159,7 @@ export default function Dashboard() {
         {safeYears.length === 0 ? (
           <p className="text-muted-foreground">No courses added yet.</p>
         ) : filteredCourses.length === 0 ? (
-          <p className="text-muted-foreground">
-            No courses match the current filter.
-          </p>
+          <p className="text-muted-foreground">No courses match the current filter.</p>
         ) : (
           <table className="w-full border-collapse">
             <thead>

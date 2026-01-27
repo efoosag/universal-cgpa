@@ -2,87 +2,64 @@
 
 import { useState } from "react";
 import { useAcademicStore } from "@/store/academicStore";
-import { calculateCGPA, gradeToPoint } from "@/lib/calculations";
-import { GRADING_SCALES } from "@/lib/grading";
+import { calculateCGPA } from "@/lib/calculations";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
-export default function TargetCGPAPlanner() {
+export default function TargetCGPAPlanner({ gradingScale }) {
   const { years } = useAcademicStore();
-  const gradingScale = GRADING_SCALES["ng-5"];
-
-  const [targetCGPA, setTargetCGPA] = useState("");
-  const [requiredAverage, setRequiredAverage] = useState(null);
+  const [target, setTarget] = useState("");
+  const [required, setRequired] = useState(null);
 
   const handleCalculate = () => {
-    if (!targetCGPA || years.length === 0) return;
-
-    // Calculate total credits and points of completed semesters
-    let totalCreditsDone = 0;
-    let totalPointsDone = 0;
+    let completedCredits = 0;
+    let completedPoints = 0;
+    let remainingCredits = 0;
 
     years.forEach((year) => {
       year.semesters.forEach((semester) => {
-        if (semester.status === "completed") {
-          semester.courses.forEach((course) => {
-            const point = gradeToPoint(course.grade, gradingScale);
-            totalPointsDone += point * course.creditUnit;
-            totalCreditsDone += course.creditUnit;
-          });
-        }
+        semester.courses.forEach((course) => {
+          const point = gradingScale[course.grade];
+          if (semester.status === "completed" && point != null) {
+            completedPoints += point * course.creditUnit;
+            completedCredits += course.creditUnit;
+          } else {
+            remainingCredits += course.creditUnit;
+          }
+        });
       });
     });
 
-    // Total credits left in ongoing/planned semesters
-    let totalCreditsLeft = 0;
-    years.forEach((year) => {
-      year.semesters.forEach((semester) => {
-        if (semester.status !== "completed") {
-          semester.courses.forEach((course) => {
-            totalCreditsLeft += course.creditUnit;
-          });
-        }
-      });
-    });
+    if (remainingCredits === 0) return;
 
-    if (totalCreditsLeft === 0) {
-      alert("No remaining courses to achieve target CGPA.");
-      return;
-    }
+    const needed =
+      ((target * (completedCredits + remainingCredits)) - completedPoints) /
+      remainingCredits;
 
-    // Calculate required average points
-    const targetPoints = Number(targetCGPA) * (totalCreditsDone + totalCreditsLeft);
-    const remainingPoints = targetPoints - totalPointsDone;
-    const avgRequired = remainingPoints / totalCreditsLeft;
-
-    setRequiredAverage(Number(avgRequired.toFixed(2)));
+    setRequired(+needed.toFixed(2));
   };
 
   return (
-    <div className="border rounded-lg p-4 space-y-4">
-      <h3 className="text-lg font-semibold">Target CGPA Planner</h3>
+    <div className="border rounded p-4 space-y-3">
+      <h3 className="font-semibold">Target CGPA Planner</h3>
 
-      <div className="flex gap-2 items-center">
-        <Input
-          type="number"
-          placeholder="Enter Target CGPA"
-          value={targetCGPA}
-          onChange={(e) => setTargetCGPA(e.target.value)}
-          className="w-32"
-        />
-        <Button onClick={handleCalculate}>Calculate</Button>
-      </div>
+      <input
+        type="number"
+        step="0.01"
+        placeholder="Target CGPA"
+        className="border px-2 py-1 w-full"
+        value={target}
+        onChange={(e) => setTarget(Number(e.target.value))}
+      />
 
-      {requiredAverage !== null && (
-        <div>
-          <p className="font-medium">
-            Required Average Points for Remaining Courses:
-          </p>
-          <p className="text-xl font-bold">{requiredAverage}</p>
-          <p className="text-sm text-muted-foreground">
-            Use this as a guide to plan your grades.
-          </p>
-        </div>
+      <Button onClick={handleCalculate}>Calculate Required GPA</Button>
+
+      {required !== null && (
+        <p className="font-bold">
+          Required GPA in remaining courses:{" "}
+          <span className={required > 5 ? "text-red-600" : "text-green-600"}>
+            {required}
+          </span>
+        </p>
       )}
     </div>
   );
