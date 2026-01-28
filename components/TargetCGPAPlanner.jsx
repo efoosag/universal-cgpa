@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useAcademicStore } from "@/store/academicStore";
-import { calculateCGPA } from "@/lib/calculations";
 import { Button } from "@/components/ui/button";
 
 export default function TargetCGPAPlanner({ gradingScale }) {
@@ -29,38 +28,64 @@ export default function TargetCGPAPlanner({ gradingScale }) {
       });
     });
 
-    if (remainingCredits === 0) return;
+    if (remainingCredits === 0 || !target) return;
 
     const needed =
-      ((target * (completedCredits + remainingCredits)) - completedPoints) /
+      ((target * (completedCredits + remainingCredits)) -
+        completedPoints) /
       remainingCredits;
 
     setRequired(+needed.toFixed(2));
   };
 
   return (
-    <div className="border rounded p-4 space-y-3">
-      <h3 className="font-semibold">Target CGPA Planner</h3>
+    <section
+      className="
+        rounded-2xl border p-5 space-y-4 shadow-sm
+        bg-white border-slate-200
+        dark:bg-slate-900 dark:border-slate-700
+      "
+    >
+      <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+        Target CGPA Planner
+      </h3>
 
+      {/* Target Input */}
       <input
         type="number"
         step="0.01"
-        placeholder="Target CGPA"
-        className="border px-2 py-1 w-full"
+        placeholder="Enter target CGPA"
+        className="
+          w-full rounded-md border px-3 py-2 text-sm
+          bg-white text-slate-900
+          focus:outline-none focus:ring-2 focus:ring-blue-500
+          dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600
+        "
         value={target}
         onChange={(e) => setTarget(Number(e.target.value))}
       />
 
-      <Button onClick={handleCalculate}>Calculate Required GPA</Button>
+      <Button onClick={handleCalculate} className="w-full">
+        Calculate Required GPA
+      </Button>
 
+      {/* Result */}
       {required !== null && (
-        <p className="font-bold">
-          Required GPA in remaining courses:{" "}
-          <span className={required > 5 ? "text-red-600" : "text-green-600"}>
-            {required}
-          </span>
-        </p>
+        <div
+          className={`rounded-xl border p-3 text-center transition-colors
+            ${
+              required > Math.max(...Object.values(gradingScale))
+                ? "bg-red-50 border-red-300 text-red-700 dark:bg-red-950 dark:border-red-700 dark:text-red-300"
+                : "bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-950 dark:border-blue-700 dark:text-blue-300"
+            }
+          `}
+        >
+          <p className="text-sm">
+            Required GPA in remaining courses
+          </p>
+          <p className="text-2xl font-bold mt-1">{required}</p>
+        </div>
       )}
-    </div>
+    </section>
   );
 }

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-slate-100">
+    <main className="min-h-screen bg-linear-to-br from-blue-50 via-white to-slate-100">
       {/* HERO SECTION */}
       <section className="max-w-6xl mx-auto px-6 pt-28 pb-20 text-center">
         <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-slate-900 mb-6">
