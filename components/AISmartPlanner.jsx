@@ -65,41 +65,59 @@ export default function AISmartPlanner({ gradingScale }) {
   };
 
   return (
-    <div
+    <section
       className="
-        rounded-2xl border p-5 space-y-4
-        bg-white border-slate-200 shadow-sm
+        rounded-2xl border p-5 space-y-4 shadow-sm
+        bg-white border-slate-200
         dark:bg-slate-900 dark:border-slate-700
       "
     >
-      <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-        AI Grade Planner
-      </h3>
+      {/* Header */}
+      <div className="space-y-1">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          🎓 AI Smart Grade Planner
+        </h3>
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          Tell the system your desired CGPA and it will estimate the minimum
+          grades you need going forward.
+        </p>
+      </div>
 
-      <p className="text-sm text-slate-600 dark:text-slate-400">
-        Enter your target CGPA and let the system suggest the minimum grades
-        required to reach it.
-      </p>
+      {/* Target Input */}
+      <div className="space-y-1">
+        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+          Target CGPA
+        </label>
+        <Input
+          type="number"
+          step="0.01"
+          placeholder="e.g. 4.00"
+          value={target}
+          onChange={(e) => setTarget(e.target.value)}
+          className="
+            bg-white dark:bg-slate-800
+            border-slate-300 dark:border-slate-600
+            focus:ring-2 focus:ring-blue-500
+          "
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Your desired final CGPA based on your grading scale.
+        </p>
+      </div>
 
-      <Input
-        type="number"
-        step="0.01"
-        placeholder="Target CGPA (e.g. 4.00)"
-        value={target}
-        onChange={(e) => setTarget(e.target.value)}
-        className="
-          bg-white dark:bg-slate-800
-          border-slate-300 dark:border-slate-600
-        "
-      />
-
-      <Button onClick={handleSuggest} className="w-full">
-        Get AI Suggestion
+      {/* Action */}
+      <Button
+        onClick={handleSuggest}
+        disabled={!target}
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+      >
+        Get AI Recommendation
       </Button>
 
+      {/* Result */}
       {suggestion && (
         <div
-          className={`rounded-xl p-4 text-center border
+          className={`rounded-xl p-4 text-center border transition-colors
             ${
               suggestion.status === "achievable"
                 ? "bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-950 dark:border-blue-700 dark:text-blue-300"
@@ -109,30 +127,45 @@ export default function AISmartPlanner({ gradingScale }) {
         >
           {suggestion.status === "achievable" ? (
             <>
-              <p className="font-semibold">Target is achievable 🎯</p>
-              <p className="mt-1 text-sm">
-                Aim for at least:
+              <p className="font-semibold text-base">
+                🎯 Target is achievable
               </p>
-              <p className="text-2xl font-bold mt-1">
-                {suggestion.grade} in remaining courses
-              </p>
+
               <p className="text-sm mt-1">
-                Projected CGPA: {suggestion.simulated}
+                Aim for at least this grade in your remaining courses:
+              </p>
+
+              <p className="text-3xl font-bold mt-2">
+                {suggestion.grade}
+              </p>
+
+              <p className="text-sm mt-2">
+                Projected CGPA:{" "}
+                <span className="font-semibold">
+                  {suggestion.simulated}
+                </span>
               </p>
             </>
           ) : (
             <>
-              <p className="font-semibold">Target may be unrealistic ⚠️</p>
-              <p className="text-sm mt-1">
-                Even maximum grades won’t reach the target.
+              <p className="font-semibold text-base">
+                ⚠️ Target may be unrealistic
               </p>
+
               <p className="text-sm mt-1">
-                Current CGPA: {currentCGPA}
+                Even with maximum grades, the target cannot be reached.
+              </p>
+
+              <p className="text-sm mt-2">
+                Current CGPA:{" "}
+                <span className="font-semibold">
+                  {currentCGPA}
+                </span>
               </p>
             </>
           )}
         </div>
       )}
-    </div>
+    </section>
   );
 }

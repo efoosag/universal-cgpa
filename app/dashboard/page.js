@@ -1,22 +1,23 @@
 "use client";
 
-import { Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAcademicStore } from "@/store/academicStore";
 import { calculateSemesterGPA, calculateCGPA } from "@/lib/calculations";
 import { GRADING_SCALES } from "@/lib/grading";
+
 import AddCourseForm from "@/components/AddCourseForm";
 import EditCourseModal from "@/components/EditCourseModal";
 import EditProfileModal from "@/components/EditProfileModal";
 import ConfirmModal from "@/components/ConfirmModal";
 import WhatIfPanel from "@/components/WhatIfPanel";
 import TargetCGPAPlanner from "@/components/TargetCGPAPlanner";
+import AISmartPlanner from "@/components/AISmartPlanner";
+
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { GraduationCap, Settings } from "lucide-react";
-import AISmartPlanner from "@/components/AISmartPlanner";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Dashboard() {
@@ -110,322 +111,194 @@ export default function Dashboard() {
 
   return (
     <main className="min-h-screen bg-linear-to-br from-blue-50 via-white to-slate-100 p-6 space-y-6">
+
       {/* CGPA SUMMARY */}
-      <div
-  className="
-    rounded-2xl border p-6 shadow-md
-    flex flex-col md:flex-row md:items-center md:justify-between gap-4
-    bg-white border-slate-200
-    dark:bg-slate-900 dark:border-slate-700
-    transition-colors
-  "
->
-  {/* Left: CGPA Info */}
-  <div className="flex items-center gap-4">
-    <div
-      className="
-        p-3 rounded-xl
-        bg-blue-100 text-blue-600
-        dark:bg-blue-950 dark:text-blue-400
-      "
-    >
-      <GraduationCap size={28} />
-    </div>
+      <div className="rounded-2xl border p-6 shadow-md flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-700 transition-colors">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
+            <GraduationCap size={28} />
+          </div>
+          <div>
+            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">Cumulative GPA</h2>
+            <p className="text-4xl font-bold text-blue-600 dark:text-blue-400">{cgpa}</p>
+            <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">Grading Scale: {gradingLabel}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex items-center gap-2 border-blue-500 text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-950"
+            onClick={() => setEditProfileModalOpen(true)}
+          >
+            <Settings size={16} /> Edit Profile
+          </Button>
+          <EditProfileModal open={editProfileModalOpen} onOpenChange={setEditProfileModalOpen} />
+          <ThemeToggle />
+        </div>
+      </div>
 
-    <div>
-      <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">
-        Cumulative GPA
-      </h2>
-
-      <p className="text-4xl font-bold text-blue-600 dark:text-blue-400">
-        {cgpa}
-      </p>
-
-      <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
-        Grading Scale: {gradingLabel}
-      </p>
-    </div>
-  </div>
-
-  {/* Right: Actions */}
-  <div className="flex items-center gap-2">
-    <Button
-      size="sm"
-      variant="outline"
-      className="
-        flex items-center gap-2
-        border-blue-500 text-blue-600
-        hover:bg-blue-50
-        dark:border-blue-400 dark:text-blue-400
-        dark:hover:bg-blue-950
-      "
-      onClick={() => setEditProfileModalOpen(true)}
-    >
-      <Settings size={16} />
-      Edit Profile
-    </Button>
-
-    <EditProfileModal
-      open={editProfileModalOpen}
-      onOpenChange={setEditProfileModalOpen}
-    />
-
-    <ThemeToggle />
-  </div>
-</div>
-
-
-      {/* PANELS */}
+      {/* GPA PANELS */}
       <div className="grid md:grid-cols-2 gap-6">
-  {/* Left Side Panels */}
-  <div className="grid md:grid-cols-2 gap-6">
-    <div
-      className="
-        rounded-2xl border p-4 shadow-sm
-        bg-white border-slate-200
-        dark:bg-slate-900 dark:border-slate-700
-        transition-colors
-      "
-    >
-      <WhatIfPanel gradingScale={gradingScale} years={safeYears} />
-    </div>
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* What-If Panel */}
+          <div className="rounded-2xl border p-5 shadow-sm bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-700 transition-colors">
+            <WhatIfPanel gradingScale={gradingScale} years={safeYears} />
+          </div>
 
-    <div
-      className="
-        rounded-2xl border p-4 shadow-sm
-        bg-white border-slate-200
-        dark:bg-slate-900 dark:border-slate-700
-        transition-colors
-      "
-    >
-      <AISmartPlanner gradingScale={gradingScale} />
-    </div>
-  </div>
+          {/* AI Planner */}
+          <div className="rounded-2xl border p-5 shadow-sm bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-700 transition-colors">
+            <AISmartPlanner gradingScale={gradingScale} years={safeYears} />
+          </div>
+        </div>
 
-  {/* Right Side Panel */}
-  <div
-    className="
-      rounded-2xl border p-4 shadow-sm
-      bg-white border-slate-200
-      dark:bg-slate-900 dark:border-slate-700
-      transition-colors
-    "
-  >
-    <TargetCGPAPlanner gradingScale={gradingScale} years={safeYears} />
-  </div>
-</div>
-
+        {/* Target CGPA */}
+        <div className="rounded-2xl border p-5 shadow-sm bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-700 transition-colors">
+          <TargetCGPAPlanner gradingScale={gradingScale} years={safeYears} />
+        </div>
+      </div>
 
       {/* FILTERS */}
-      <div
-  className="
-    sticky top-4 z-30
-    flex flex-col md:flex-row gap-4 items-center
-    rounded-2xl border p-4 shadow-sm backdrop-blur
-    bg-white/90 border-slate-200
-    dark:bg-slate-900/90 dark:border-slate-700
-    transition-colors
-  "
->
-  {/* Year Filter */}
-  <Select
-    value={filterYear}
-    onValueChange={setFilterYear}
-    className="
-      md:w-1/2
-      bg-white dark:bg-slate-800
-      border-slate-300 dark:border-slate-600
-      text-slate-900 dark:text-slate-100
-      focus:ring-2 focus:ring-blue-500
-    "
-  >
-    <option value="">All Years</option>
-    {safeYears.map((year) => (
-      <option key={year.id} value={year.title}>
-        {year.title}
-      </option>
-    ))}
-  </Select>
+      <div className="sticky top-4 z-30 flex flex-col md:flex-row gap-4 items-center rounded-2xl border p-4 shadow-sm backdrop-blur bg-white/90 border-slate-200 dark:bg-slate-900/90 dark:border-slate-700 transition-colors">
+        <Select
+          value={filterYear}
+          onValueChange={setFilterYear}
+          className="md:w-1/2 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">All Years</option>
+          {safeYears.map((year) => (
+            <option key={year.id} value={year.title}>{year.title}</option>
+          ))}
+        </Select>
 
-  {/* Semester Filter */}
-  <Select
-    value={filterSemester}
-    onValueChange={setFilterSemester}
-    className="
-      md:w-1/2
-      bg-white dark:bg-slate-800
-      border-slate-300 dark:border-slate-600
-      text-slate-900 dark:text-slate-100
-      focus:ring-2 focus:ring-blue-500
-    "
-  >
-    <option value="">All Semesters</option>
-    {semesterOptions.map((sem) => (
-      <option key={sem} value={sem}>
-        {sem}
-      </option>
-    ))}
-  </Select>
+        <Select
+          value={filterSemester}
+          onValueChange={setFilterSemester}
+          className="md:w-1/2 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">All Semesters</option>
+          {semesterOptions.map((sem) => (
+            <option key={sem} value={sem}>{sem}</option>
+          ))}
+        </Select>
 
-  {/* Reset Button */}
-  <Button
-    variant="outline"
-    className="
-      border-blue-500 text-blue-600
-      hover:bg-blue-50
-      dark:border-blue-400 dark:text-blue-400
-      dark:hover:bg-blue-950
-      transition-colors
-    "
-    onClick={() => {
-      setFilterYear("");
-      setFilterSemester("");
-    }}
-  >
-    Reset Filters
-  </Button>
-</div>
-
+        <Button
+          variant="outline"
+          className="border-blue-500 text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-950 transition-colors"
+          onClick={() => { setFilterYear(""); setFilterSemester(""); }}
+        >
+          Reset Filters
+        </Button>
+      </div>
 
       {/* COURSES TABLE */}
-      <div className="rounded-2xl border border-slate-200 p-4 bg-white shadow-sm">
-        <h2 className="text-lg font-semibold mb-2 text-slate-900">
-          All Courses Overview
-        </h2>
-        {safeYears.length === 0 ? (
-          <p className="text-slate-500">No courses added yet.</p>
-        ) : filteredCourses.length === 0 ? (
-          <p className="text-slate-500">No courses match the current filter.</p>
-        ) : (
-          <table className="w-full border-collapse">
-            <thead className="bg-blue-100 text-slate-900">
-              <tr className="hover:bg-blue-50 transition">
-                <th className="border p-2 text-left">Year</th>
-                <th className="border p-2 text-left">Semester</th>
-                <th className="border p-2 text-left">Course</th>
-                <th className="border p-2 text-center">CU</th>
-                <th className="border p-2 text-center">Grade</th>
+<div className="rounded-2xl border border-blue-300 dark:border-blue-700 p-4 bg-white dark:bg-blue-950 shadow-sm transition-colors">
+  <h2 className="text-lg font-semibold mb-3 text-blue-900 dark:text-blue-100">
+    All Courses Overview
+  </h2>
+
+  {safeYears.length === 0 ? (
+    <p className="text-blue-700 dark:text-blue-300">No courses added yet.</p>
+  ) : filteredCourses.length === 0 ? (
+    <p className="text-blue-700 dark:text-blue-300">No courses match the current filter.</p>
+  ) : (
+    <div className="overflow-x-auto rounded-xl border border-blue-300 dark:border-blue-700">
+      <table className="w-full border-collapse text-sm">
+        <thead className="sticky top-0 z-10 bg-blue-200 dark:bg-blue-900 text-blue-900 dark:text-blue-100">
+          <tr>
+            <th className="border border-blue-300 dark:border-blue-700 p-2 text-left">Year</th>
+            <th className="border border-blue-300 dark:border-blue-700 p-2 text-left">Semester</th>
+            <th className="border border-blue-300 dark:border-blue-700 p-2 text-left">Course</th>
+            <th className="border border-blue-300 dark:border-blue-700 p-2 text-center">CU</th>
+            <th className="border border-blue-300 dark:border-blue-700 p-2 text-center">Grade</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {filteredCourses.map((course) => {
+            const gradeColor =
+              course.grade === "A"
+                ? "text-emerald-600 dark:text-emerald-400 font-semibold"
+                : course.grade === "F"
+                ? "text-red-600 dark:text-red-400 font-semibold"
+                : "text-blue-900 dark:text-blue-200";
+
+            return (
+              <tr key={course.id} className="hover:bg-blue-50 dark:hover:bg-blue-800 transition">
+                <td className="border border-blue-300 dark:border-blue-700 p-2">{course.year}</td>
+                <td className="border border-blue-300 dark:border-blue-700 p-2">{course.semester}</td>
+                <td className="border border-blue-300 dark:border-blue-700 p-2">{course.name}</td>
+                <td className="border border-blue-300 dark:border-blue-700 p-2 text-center">{course.creditUnit}</td>
+                <td className={`border border-blue-300 dark:border-blue-700 p-2 text-center ${gradeColor}`}>{course.grade}</td>
               </tr>
-            </thead>
-            <tbody>
-              {filteredCourses.map((course) => (
-                <tr key={course.id} className="hover:bg-blue-50">
-                  <td className="border p-2">{course.year}</td>
-                  <td className="border p-2">{course.semester}</td>
-                  <td className="border p-2">{course.name}</td>
-                  <td className="border p-2 text-center">
-                    {course.creditUnit}
-                  </td>
-                  <td className="border p-2 text-center">{course.grade}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  )}
+</div>
+
 
       {/* ACADEMIC YEARS COLLAPSIBLE */}
       <Button
-        className="bg-blue-600 hover:bg-blue-700 text-white w-full"
-        variant="outline"
+        className="w-full rounded-xl font-medium transition bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
         onClick={() => setShowAcademicYears(!showAcademicYears)}
       >
         {showAcademicYears ? "Hide Academic Years" : "Show Academic Years"}
       </Button>
 
       {showAcademicYears && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {safeYears.map((year) => (
             <details
               key={year.id}
-              className="rounded-2xl border border-slate-200 p-4 bg-white shadow-sm"
+              className="rounded-2xl border p-5 shadow-sm transition bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-700"
             >
-              <summary className="cursor-pointer font-semibold text-slate-900">
-                {year.title}
-              </summary>
+              <summary className="cursor-pointer font-semibold text-lg text-slate-900 dark:text-slate-100">{year.title}</summary>
+              <div className="mt-4 space-y-3">
+                {year.semesters.map((semester) => {
+                  const semesterGPA = calculateSemesterGPA(semester, gradingScale);
+                  const isExpanded = expandedSemesters[semester.id] || false;
 
-              {year.semesters.map((semester) => {
-                const semesterGPA = calculateSemesterGPA(
-                  semester,
-                  gradingScale,
-                );
-                const isExpanded = expandedSemesters[semester.id] || false;
-
-                return (
-                  <div
-                    key={semester.id}
-                    className="ml-4 border-l pl-4 mt-2 p-2 bg-blue-50 rounded"
-                  >
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-slate-900">
-                        {semester.title} (GPA: {semesterGPA})
-                      </span>
-                      <Button
-                        variant="outline"
-                        className="border-slate-300"
-                        size="xs"
-                        onClick={() => toggleSemester(semester.id)}
-                      >
-                        {isExpanded ? "Hide Courses" : "Show Courses"}
-                      </Button>
-                    </div>
-
-                    {isExpanded && (
-                      <div className="space-y-2">
-                        <AddCourseForm
-                          yearId={year.id}
-                          semesterId={semester.id}
-                          onAdd={addCourse}
-                          gradingScale={gradingScale}
-                        />
-
-                        {semester.courses.map((course) => (
-                          <div
-                            key={course.id}
-                            className="flex justify-between items-center border p-2 rounded-md bg-white shadow-sm"
-                          >
-                            <span>
-                              {course.name} ({course.creditUnit} CU) -{" "}
-                              {course.grade}
-                            </span>
-                            <div className="flex gap-2">
-                              <Button
-                                size="xs"
-                                variant="outline"
-                                onClick={() => {
-                                  setEditingCourse({
-                                    ...course,
-                                    yearId: year.id,
-                                    semesterId: semester.id,
-                                  });
-                                  setEditCourseModalOpen(true);
-                                }}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                size="xs"
-                                variant="destructive"
-                                onClick={() => {
-                                  setCourseToDelete({
-                                    yearId: year.id,
-                                    semesterId: semester.id,
-                                    courseId: course.id,
-                                    name: course.name,
-                                  });
-                                  setDeleteCourseModalOpen(true);
-                                }}
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
+                  return (
+                    <div key={semester.id} className="ml-4 rounded-xl border-l-4 p-4 transition border-blue-400 bg-blue-50 dark:border-blue-500 dark:bg-slate-800">
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="font-medium text-slate-900 dark:text-slate-100">
+                          {semester.title} <span className="ml-2 text-sm text-blue-600 dark:text-blue-400">GPA: {semesterGPA}</span>
+                        </span>
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          className="border-blue-400 text-blue-600 hover:bg-blue-50 dark:border-blue-500 dark:text-blue-400 dark:hover:bg-slate-700"
+                          onClick={() => toggleSemester(semester.id)}
+                        >
+                          {isExpanded ? "Hide Courses" : "Show Courses"}
+                        </Button>
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+
+                      {isExpanded && (
+                        <div className="space-y-3">
+                          <AddCourseForm yearId={year.id} semesterId={semester.id} onAdd={addCourse} gradingScale={gradingScale} />
+                          {semester.courses.map((course) => (
+                            <div key={course.id} className="flex justify-between items-center rounded-lg border p-3 shadow-sm transition bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-700">
+                              <span className="text-sm text-slate-800 dark:text-slate-200">
+                                {course.name} <span className="mx-1 text-slate-400">•</span>
+                                {course.creditUnit} CU <span className="mx-1 text-slate-400">•</span>
+                                <span className="font-semibold text-blue-600 dark:text-blue-400">{course.grade}</span>
+                              </span>
+                              <div className="flex gap-2">
+                                <Button size="xs" variant="outline" onClick={() => { setEditingCourse({...course, yearId: year.id, semesterId: semester.id}); setEditCourseModalOpen(true); }}>Edit</Button>
+                                <Button size="xs" variant="destructive" onClick={() => { setCourseToDelete({yearId: year.id, semesterId: semester.id, courseId: course.id, name: course.name}); setDeleteCourseModalOpen(true); }}>Delete</Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </details>
           ))}
         </div>
@@ -438,14 +311,7 @@ export default function Dashboard() {
           onOpenChange={setDeleteCourseModalOpen}
           title="Delete Course"
           message={`Are you sure you want to delete course ${courseToDelete.name}?`}
-          onConfirm={() => {
-            deleteCourse(
-              courseToDelete.yearId,
-              courseToDelete.semesterId,
-              courseToDelete.courseId,
-            );
-            setCourseToDelete(null);
-          }}
+          onConfirm={() => { deleteCourse(courseToDelete.yearId, courseToDelete.semesterId, courseToDelete.courseId); setCourseToDelete(null); }}
         />
       )}
 
@@ -454,15 +320,7 @@ export default function Dashboard() {
           open={editCourseModalOpen}
           onOpenChange={setEditCourseModalOpen}
           course={editingCourse}
-          onSave={(updatedCourse) => {
-            editCourse(
-              editingCourse.yearId,
-              editingCourse.semesterId,
-              editingCourse.id,
-              updatedCourse,
-            );
-            setEditingCourse(null);
-          }}
+          onSave={(updatedCourse) => { editCourse(editingCourse.yearId, editingCourse.semesterId, editingCourse.id, updatedCourse); setEditingCourse(null); }}
         />
       )}
     </main>

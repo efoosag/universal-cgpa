@@ -28,15 +28,16 @@ export default function TargetCGPAPlanner({ gradingScale }) {
       });
     });
 
-    if (remainingCredits === 0 || !target) return;
+    if (!target || remainingCredits === 0) return;
 
     const needed =
-      ((target * (completedCredits + remainingCredits)) -
-        completedPoints) /
+      (target * (completedCredits + remainingCredits) - completedPoints) /
       remainingCredits;
 
     setRequired(+needed.toFixed(2));
   };
+
+  const maxGrade = Math.max(...Object.values(gradingScale));
 
   return (
     <section
@@ -46,44 +47,81 @@ export default function TargetCGPAPlanner({ gradingScale }) {
         dark:bg-slate-900 dark:border-slate-700
       "
     >
-      <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-        Target CGPA Planner
-      </h3>
+      {/* Header */}
+      <div className="space-y-1">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          🎯 Target CGPA Planner
+        </h3>
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          Enter your desired CGPA and calculate the minimum GPA you need in your
+          remaining courses.
+        </p>
+      </div>
 
       {/* Target Input */}
-      <input
-        type="number"
-        step="0.01"
-        placeholder="Enter target CGPA"
-        className="
-          w-full rounded-md border px-3 py-2 text-sm
-          bg-white text-slate-900
-          focus:outline-none focus:ring-2 focus:ring-blue-500
-          dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600
-        "
-        value={target}
-        onChange={(e) => setTarget(Number(e.target.value))}
-      />
+      <div className="space-y-1">
+        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+          Target CGPA
+        </label>
+        <input
+          type="number"
+          step="0.01"
+          placeholder="e.g. 4.00"
+          value={target}
+          onChange={(e) => setTarget(Number(e.target.value))}
+          className="
+            w-full rounded-md border px-3 py-2 text-sm
+            bg-white text-slate-900
+            focus:outline-none focus:ring-2 focus:ring-blue-500
+            dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600
+          "
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          The CGPA you want to achieve at the end of your program.
+        </p>
+      </div>
 
-      <Button onClick={handleCalculate} className="w-full">
+      {/* Action Button */}
+      <Button
+        onClick={handleCalculate}
+        disabled={!target}
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+      >
         Calculate Required GPA
       </Button>
 
-      {/* Result */}
+      {/* Result Card */}
       {required !== null && (
         <div
-          className={`rounded-xl border p-3 text-center transition-colors
+          className={`rounded-xl border p-4 text-center transition-colors
             ${
-              required > Math.max(...Object.values(gradingScale))
+              required > maxGrade
                 ? "bg-red-50 border-red-300 text-red-700 dark:bg-red-950 dark:border-red-700 dark:text-red-300"
                 : "bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-950 dark:border-blue-700 dark:text-blue-300"
             }
           `}
         >
-          <p className="text-sm">
-            Required GPA in remaining courses
-          </p>
-          <p className="text-2xl font-bold mt-1">{required}</p>
+          {required > maxGrade ? (
+            <>
+              <p className="font-semibold text-sm">
+                ⚠️ Target may be unrealistic
+              </p>
+              <p className="mt-1 text-xs">
+                Even achieving the highest possible grades cannot reach this
+                CGPA.
+              </p>
+              <p className="text-2xl font-bold mt-2">{required}</p>
+            </>
+          ) : (
+            <>
+              <p className="font-semibold text-sm">✅ Required GPA</p>
+              <p className="mt-1 text-xs">
+                Minimum GPA needed in your remaining courses to reach your
+                target.
+              </p>
+              <p className="text-2xl font-bold mt-2">{required}</p>
+            </>
+          )}
         </div>
       )}
     </section>
