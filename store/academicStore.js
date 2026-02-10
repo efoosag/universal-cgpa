@@ -1,7 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-const uid = () => crypto.randomUUID();
+// ================================
+// Hydration-safe ID generator
+// ================================
+const uid = () =>
+  typeof window === "undefined" ? "temp-id" : crypto.randomUUID();
 
 export const useAcademicStore = create(
   persist(
@@ -19,7 +23,7 @@ export const useAcademicStore = create(
       setProfile: (profile) =>
         set({
           profile: {
-            gradingScale: "ng-5", // ✅ default
+            gradingScaleId: "ng-5", // default grading scale
             ...profile,
           },
           isInitialized: true,
@@ -43,23 +47,21 @@ export const useAcademicStore = create(
                 oldProfile.gradingScaleId ??
                 "ng-5",
             },
-
             years: structureChanged ? [] : state.years,
             isInitialized: true,
           };
         }),
 
-      // ===== STRUCTURE =====
+      // ===== STRUCTURE INITIALIZATION =====
       initializeAcademicStructure: (programYears, semestersPerYear) =>
         set(() => ({
           years: Array.from({ length: programYears }, (_, y) => ({
             id: uid(),
             title: `Year ${y + 1}`,
-            createdAt: new Date().toISOString(),
             semesters: Array.from({ length: semestersPerYear }, (_, s) => ({
               id: uid(),
               title: `Semester ${s + 1}`,
-              status: "planned",
+              status: "planned", // planned | ongoing | completed
               courses: [],
             })),
           })),
@@ -87,18 +89,18 @@ export const useAcademicStore = create(
                             ...sem.courses,
                             {
                               id: uid(),
-                              name: courseData.name,
-                              code: courseData.code || "",
+                              name: courseData.name.trim(),
+                              code: courseData.code?.trim() || "",
                               creditUnit: Number(courseData.creditUnit),
-                              grade: courseData.grade,
+                              grade: courseData.grade ?? null, // allow ungraded
                               isRetake: !!courseData.isRetake,
                             },
                           ],
                         }
-                      : sem,
+                      : sem
                   ),
                 }
-              : year,
+              : year
           ),
         })),
 
@@ -112,14 +114,27 @@ export const useAcademicStore = create(
                     sem.id === semesterId
                       ? {
                           ...sem,
-                          courses: sem.courses.map((c) =>
-                            c.id === courseId ? { ...c, ...updatedCourse } : c,
+                          courses: sem.courses.map((course) =>
+                            course.id === courseId
+                              ? {
+                                  ...course,
+                                  ...updatedCourse,
+                                  creditUnit:
+                                    updatedCourse.creditUnit !== undefined
+                                      ? Number(updatedCourse.creditUnit)
+                                      : course.creditUnit,
+                                  grade:
+                                    updatedCourse.grade !== undefined
+                                      ? updatedCourse.grade ?? null
+                                      : course.grade,
+                                }
+                              : course
                           ),
                         }
-                      : sem,
+                      : sem
                   ),
                 }
-              : year,
+              : year
           ),
         })),
 
@@ -133,12 +148,29 @@ export const useAcademicStore = create(
                     sem.id === semesterId
                       ? {
                           ...sem,
-                          courses: sem.courses.filter((c) => c.id !== courseId),
+                          courses: sem.courses.filter(
+                            (course) => course.id !== courseId
+                          ),
                         }
-                      : sem,
+                      : sem
                   ),
                 }
-              : year,
+              : year
+          ),
+        })),
+
+      // ===== SEMESTER STATUS =====
+      updateSemesterStatus: (yearId, semesterId, status) =>
+        set((state) => ({
+          years: state.years.map((year) =>
+            year.id === yearId
+              ? {
+                  ...year,
+                  semesters: year.semesters.map((sem) =>
+                    sem.id === semesterId ? { ...sem, status } : sem
+                  ),
+                }
+              : year
           ),
         })),
     }),
@@ -148,6 +180,6 @@ export const useAcademicStore = create(
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated();
       },
-    },
-  ),
+    }
+  )
 );

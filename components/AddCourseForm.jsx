@@ -13,12 +13,15 @@ export default function AddCourseForm({
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [creditUnit, setCreditUnit] = useState("");
-  const [grade, setGrade] = useState("");
+  const [grade, setGrade] = useState(""); // optional
   const [isRetake, setIsRetake] = useState(false);
 
-  const isDisabled = !name.trim() || !creditUnit || !grade;
-  const gradeOptions = Object.keys(gradingScale || {});
+  // ✅ grade is no longer required
+  const isDisabled =
+  !name.trim() || Number(creditUnit) <= 0;
 
+  const gradeOptions = Object.keys(gradingScale || {});
+  
   const handleSubmit = (e) => {
     e.preventDefault();
     if (isDisabled) return;
@@ -27,7 +30,7 @@ export default function AddCourseForm({
       name: name.trim(),
       code: code.trim(),
       creditUnit: Number(creditUnit),
-      grade,
+      grade: grade || null, // ✅ explicitly allow null
       isRetake,
     });
 
@@ -37,21 +40,12 @@ export default function AddCourseForm({
     setGrade("");
     setIsRetake(false);
   };
-
+console.log(name, code, creditUnit, grade, )
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="
-        space-y-4 rounded-2xl border
-        bg-white p-5 shadow-sm
-        dark:border-neutral-800 dark:bg-neutral-900
-      "
-    >
+    <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border bg-white p-5 shadow-sm dark:bg-neutral-900">
       {/* Course Name */}
       <div className="space-y-1">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Course name
-        </label>
+        <label className="text-sm font-medium">Course name</label>
         <Input
           placeholder="e.g. Introduction to Economics"
           value={name}
@@ -59,80 +53,50 @@ export default function AddCourseForm({
         />
       </div>
 
-      {/* Course Code & Credit Unit */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Course code
-          </label>
-          <Input
-            placeholder="e.g. ECO 101"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-          />
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Credit units
-          </label>
-          <Input
-            type="number"
-            min="0"
-            placeholder="e.g. 3"
-            value={creditUnit}
-            onChange={(e) => setCreditUnit(e.target.value)}
-          />
-        </div>
+      {/* Code & Credit */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input
+          placeholder="Course code (optional)"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+        />
+        <Input
+          type="number"
+          placeholder="Credit units"
+          value={creditUnit}
+          onChange={(e) => setCreditUnit(e.target.value)}
+        />
       </div>
 
-      {/* Grade */}
+      {/* Grade (Optional) */}
       <div className="space-y-1">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Grade
+        <label className="text-sm font-medium">
+          Grade <span className="text-xs text-slate-500">(optional)</span>
         </label>
+
         <select
           value={grade}
           onChange={(e) => setGrade(e.target.value)}
-          className="
-            w-full rounded-md border px-3 py-2 text-sm
-            bg-white text-gray-900
-            focus:outline-none focus:ring-2 focus:ring-blue-500
-            dark:bg-neutral-800 dark:text-gray-100
-            dark:border-neutral-700
-          "
+          className="w-full rounded-md border px-3 py-2 text-sm"
         >
-          <option value="" disabled>
-            Select grade
-          </option>
+          <option value="">No grade yet</option>
           {gradeOptions.map((g) => (
             <option key={g} value={g}>
               {g}
             </option>
           ))}
         </select>
-      </div>
 
-      {/* Retake */}
-      <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-        <input
-          type="checkbox"
-          checked={isRetake}
-          onChange={(e) => setIsRetake(e.target.checked)}
-          className="h-4 w-4 accent-blue-600"
-        />
-        Retake course
-      </label>
+        <p className="text-xs text-slate-500">
+          You can add a grade later or simulate it in the What-If panel.
+        </p>
+      </div>
 
       {/* Submit */}
       <Button
         type="submit"
         disabled={isDisabled}
-        className="
-          w-full rounded-lg bg-blue-600
-          hover:bg-blue-700
-          disabled:opacity-50 disabled:cursor-not-allowed
-        "
+        className="w-full bg-blue-600 hover:bg-blue-700"
       >
         Add Course
       </Button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAcademicStore } from "@/store/academicStore";
 import { Button } from "@/components/ui/button";
@@ -8,10 +8,20 @@ import { Input } from "@/components/ui/input";
 import { GRADING_SCALES } from "@/lib/grading";
 
 export default function OnboardingPage() {
+  
   const router = useRouter();
+
+  useEffect(() => {
+  const stored = localStorage.getItem("universal-cgpa-storage");
+  if (stored) {
+    router.replace("/dashboard");
+  }
+}, [router]);
+
   const { setProfile, initializeAcademicStructure } = useAcademicStore();
 
   const [form, setForm] = useState({
+
     country: "",
     university: "",
     program: "",
@@ -19,6 +29,7 @@ export default function OnboardingPage() {
     semestersPerYear: 2,
     gradingScaleId: "ng-5",
   });
+
 
   const update = (key, value) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -52,7 +63,15 @@ export default function OnboardingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-linear-to-br from-blue-50 via-white to-slate-100 flex items-center justify-center px-6">
+    <main className="
+  min-h-screen
+  bg-linear-to-br
+  from-blue-50 via-white to-slate-100
+  dark:from-slate-950 dark:via-slate-900 dark:to-slate-800
+  flex items-center justify-center px-6
+  transition-colors
+">
+
       <div className="w-full max-w-xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl shadow-sm border border-blue-300 dark:border-blue-700 p-8 space-y-8 transition-colors">
         
         {/* HEADER */}
