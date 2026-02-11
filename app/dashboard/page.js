@@ -1,5 +1,9 @@
 "use client";
 
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAcademicStore } from "@/store/academicStore";
@@ -116,6 +120,56 @@ export default function Dashboard() {
         ),
     );
 
+  // export excel
+  const handleExportExcel = () => {
+    if (!filteredCourses.length) return;
+
+    const worksheetData = filteredCourses.map((course) => ({
+      Year: course.year,
+      Semester: course.semester,
+      Course: course.name,
+      CreditUnit: course.creditUnit,
+      Grade: course.grade,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "CGPA Report");
+
+    XLSX.writeFile(workbook, "CGPA_Report.xlsx");
+  };
+
+  // export pdf
+  const handleExportPDF = () => {
+    if (!filteredCourses.length) return;
+
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text("Universal CGPA Report", 14, 20);
+
+    doc.setFontSize(11);
+    doc.text(`Program: ${profile?.program || "N/A"}`, 14, 28);
+    doc.text(`Grading Scale: ${gradingLabel}`, 14, 34);
+    doc.text(`Cumulative GPA: ${cgpa}`, 14, 40);
+
+    const tableData = filteredCourses.map((course) => [
+      course.year,
+      course.semester,
+      course.name,
+      course.creditUnit,
+      course.grade,
+    ]);
+
+    autoTable(doc, {
+      head: [["Year", "Semester", "Course", "CU", "Grade"]],
+      body: tableData,
+      startY: 50,
+    });
+
+    doc.save("CGPA_Report.pdf");
+  };
+
   return (
     <main className="min-h-screen bg-linear-to-br from-blue-50 via-white to-slate-100 p-6 space-y-6">
       {/* CGPA SUMMARY */}
@@ -136,7 +190,7 @@ export default function Dashboard() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
             variant="outline"
@@ -149,6 +203,14 @@ export default function Dashboard() {
             open={editProfileModalOpen}
             onOpenChange={setEditProfileModalOpen}
           />
+          <Button size="sm" variant="outline" onClick={handleExportPDF}>
+            Export PDF
+          </Button>
+
+          <Button size="sm" variant="outline" onClick={handleExportExcel}>
+            Export Excel
+          </Button>
+
           <ThemeToggle />
           <LogoutButton />
         </div>
@@ -158,12 +220,12 @@ export default function Dashboard() {
       <div className="grid md:grid-cols-2 gap-6">
         {/* What-If Panel */}
         <div className="rounded-2xl border p-5 shadow-sm bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-700 transition-colors">
-          <WhatIfPanel gradingScale={gradingScale} years={safeYears} />
+          <WhatIfPanel gradingScale={gradingScale.points} years={safeYears} />
         </div>
 
         {/* AI Planner */}
         <div className="rounded-2xl border p-5 shadow-sm bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-700 transition-colors">
-          <UngradedTargetPlanner gradingScale={gradingScale} />
+          <UngradedTargetPlanner gradingScale={gradingScale.points} />
         </div>
       </div>
 
