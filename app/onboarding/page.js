@@ -8,20 +8,18 @@ import { Input } from "@/components/ui/input";
 import { GRADING_SCALES } from "@/lib/grading";
 
 export default function OnboardingPage() {
-  
   const router = useRouter();
 
+  const { setProfile, initializeAcademicStructure, hasHydrated, isInitialized } =
+    useAcademicStore();
   useEffect(() => {
-  const stored = localStorage.getItem("universal-cgpa-storage");
-  if (stored) {
-    router.replace("/dashboard");
-  }
-}, [router]);
-
-  const { setProfile, initializeAcademicStructure } = useAcademicStore();
+    if (!hasHydrated) return;
+    if (isInitialized) {
+      router.replace("/dashboard");
+    }
+  }, [hasHydrated, isInitialized, router]);
 
   const [form, setForm] = useState({
-
     country: "",
     university: "",
     program: "",
@@ -30,9 +28,7 @@ export default function OnboardingPage() {
     gradingScaleId: "ng-5",
   });
 
-
-  const update = (key, value) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
   function handleSubmit() {
     if (
@@ -56,31 +52,32 @@ export default function OnboardingPage() {
 
     initializeAcademicStructure(
       Number(form.programYears),
-      form.semestersPerYear
+      form.semestersPerYear,
     );
 
     router.push("/dashboard");
   }
-
+if (!hasHydrated) return null;
   return (
-    <main className="
+    <main
+      className="
   min-h-screen
   bg-linear-to-br
   from-blue-50 via-white to-slate-100
   dark:from-slate-950 dark:via-slate-900 dark:to-slate-800
   flex items-center justify-center px-6
   transition-colors
-">
-
+"
+    >
       <div className="w-full max-w-xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl shadow-sm border border-blue-300 dark:border-blue-700 p-8 space-y-8 transition-colors">
-        
         {/* HEADER */}
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-blue-900 dark:text-blue-100">
             Academic Profile Setup
           </h1>
           <p className="text-blue-700 dark:text-blue-300">
-            Provide your program details so we can create your academic structure.
+            Provide your program details so we can create your academic
+            structure.
           </p>
         </div>
 
@@ -136,9 +133,7 @@ export default function OnboardingPage() {
             </label>
             <select
               value={form.gradingScaleId}
-              onChange={(e) =>
-                update("gradingScaleId", e.target.value)
-              }
+              onChange={(e) => update("gradingScaleId", e.target.value)}
               className="mt-1 w-full rounded-xl border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-900 p-2 text-blue-900 dark:text-blue-100 focus:ring-2 focus:ring-blue-500"
             >
               {Object.entries(GRADING_SCALES).map(([id, scale]) => (

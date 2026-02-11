@@ -18,7 +18,6 @@ import WhatIfPanel from "@/components/WhatIfPanel";
 import UngradedTargetPlanner from "@/components/UnGradedTargetPlanner";
 import LogoutButton from "@/components/LogoutButton";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
 import { GraduationCap, Settings } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -31,178 +30,144 @@ export default function Dashboard() {
     hasHydrated,
     years,
     profile,
+    isPro,
     addCourse,
     editCourse,
     deleteCourse,
     initializeAcademicStructure,
   } = useAcademicStore();
 
-  const [editingCourse, setEditingCourse] = useState(null);
-  const [editCourseModalOpen, setEditCourseModalOpen] = useState(false);
-  const [deleteCourseModalOpen, setDeleteCourseModalOpen] = useState(false);
-  const [courseToDelete, setCourseToDelete] = useState(null);
-  const [editProfileModalOpen, setEditProfileModalOpen] = useState(false);
-  const [expandedSemesters, setExpandedSemesters] = useState({});
-  const [showAcademicYears, setShowAcademicYears] = useState(false);
-
-  const [filterYear, setFilterYear] = useState("");
-  const [filterSemester, setFilterSemester] = useState("");
-
   const safeYears = Array.isArray(years) ? years : [];
 
-  // Extract grading scale
   const gradingScaleFull =
     GRADING_SCALES[profile?.gradingScaleId] || GRADING_SCALES["ng-5"];
-  const { label: gradingLabel, ...gradingScale } = gradingScaleFull;
 
-  // CGPA calculation
-  const cgpa = calculateCGPA(safeYears, gradingScale.points);
-  console.log(cgpa);
-  //If user does not exist
-  useEffect(() => {
-    const stored = localStorage.getItem("universal-cgpa-storage");
-    if (!stored) {
-      router.replace("/onboarding");
-    }
-  }, [router]);
+  const { label: gradingLabel, gradingScale } = gradingScaleFull;
 
-  // Auto initialize academic structure
-  useEffect(() => {
-    if (
-      isInitialized &&
-      profile &&
-      years.length === 0 &&
-      profile.programYears &&
-      profile.semestersPerYear
-    ) {
-      initializeAcademicStructure(
-        profile.programYears,
-        profile.semestersPerYear,
-      );
-    }
-  }, [isInitialized, profile, years.length, initializeAcademicStructure]);
+  const cgpa = calculateCGPA(safeYears, gradingScale);
 
-  // Redirect if onboarding not complete
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [expandedSemesters, setExpandedSemesters] = useState({});
+
+  // Redirect protection
   useEffect(() => {
     if (!hasHydrated) return;
     if (!isInitialized) router.replace("/onboarding");
-  }, [isInitialized, router, hasHydrated]);
+  }, [hasHydrated, isInitialized, router]);
 
   if (!hasHydrated) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-600">
-        Loading dashboard…
+      <div className="min-h-screen flex items-center justify-center">
+        Loading dashboard...
       </div>
     );
   }
 
-  const toggleSemester = (semesterId) =>
+  const toggleSemester = (id) => {
     setExpandedSemesters((prev) => ({
       ...prev,
-      [semesterId]: !prev[semesterId],
+      [id]: !prev[id],
     }));
+  };
 
-  const semesterOptions = Array.from(
-    new Set(safeYears.flatMap((year) => year.semesters.map((s) => s.title))),
-  );
+  // Export Excel
+  const handleExportExcel = () => {
+    if (!safeYears.length) return;
 
-  const filteredCourses = safeYears
-    .filter((y) => !filterYear || y.title === filterYear)
-    .flatMap((year) =>
-      year.semesters
-        .filter((s) => !filterSemester || s.title === filterSemester)
-        .flatMap((semester) =>
-          semester.courses.map((course) => ({
-            year: year.title,
-            semester: semester.title,
-            ...course,
-          })),
-        ),
+    const data = safeYears.flatMap((year) =>
+      year.semesters.flatMap((semester) =>
+        semester.courses.map((course) => ({
+          Year: year.title,
+          Semester: semester.title,
+          Course: course.name,
+          CU: course.creditUnit,
+          Grade: course.grade,
+        }))
+      )
     );
 
-  // export excel
-  const handleExportExcel = () => {
-    if (!filteredCourses.length) return;
-
-    const worksheetData = filteredCourses.map((course) => ({
-      Year: course.year,
-      Semester: course.semester,
-      Course: course.name,
-      CreditUnit: course.creditUnit,
-      Grade: course.grade,
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+    const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "CGPA Report");
-
     XLSX.writeFile(workbook, "CGPA_Report.xlsx");
   };
 
-  // export pdf
+  // Export PDF
   const handleExportPDF = () => {
-    if (!filteredCourses.length) return;
+    if (!safeYears.length) return;
 
     const doc = new jsPDF();
+    doc.text("Universal CGPA Report", 14, 15);
+    doc.text(`Program: ${profile?.program || "N/A"}`, 14, 25);
+    doc.text(`CGPA: ${cgpa}`, 14, 32);
 
-    doc.setFontSize(16);
-    doc.text("Universal CGPA Report", 14, 20);
-
-    doc.setFontSize(11);
-    doc.text(`Program: ${profile?.program || "N/A"}`, 14, 28);
-    doc.text(`Grading Scale: ${gradingLabel}`, 14, 34);
-    doc.text(`Cumulative GPA: ${cgpa}`, 14, 40);
-
-    const tableData = filteredCourses.map((course) => [
-      course.year,
-      course.semester,
-      course.name,
-      course.creditUnit,
-      course.grade,
-    ]);
+    const rows = safeYears.flatMap((year) =>
+      year.semesters.flatMap((semester) =>
+        semester.courses.map((course) => [
+          year.title,
+          semester.title,
+          course.name,
+          course.creditUnit,
+          course.grade,
+        ])
+      )
+    );
 
     autoTable(doc, {
       head: [["Year", "Semester", "Course", "CU", "Grade"]],
-      body: tableData,
-      startY: 50,
+      body: rows,
+      startY: 40,
     });
 
     doc.save("CGPA_Report.pdf");
   };
 
   return (
-    <main className="min-h-screen bg-linear-to-br from-blue-50 via-white to-slate-100 p-6 space-y-6">
-      {/* CGPA SUMMARY */}
-      <div className="rounded-2xl border p-6 shadow-md flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-700 transition-colors">
+    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-6 space-y-8">
+
+      {/* ===== HEADER SUMMARY ===== */}
+      <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-md p-6 flex flex-col md:flex-row justify-between gap-6">
+
         <div className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
+          <div className="p-3 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400">
             <GraduationCap size={28} />
           </div>
+
           <div>
-            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Cumulative GPA
-            </h2>
-            <p className="text-4xl font-bold text-blue-600 dark:text-blue-400">
-              {cgpa}
             </p>
-            <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
-              Grading Scale: {gradingLabel}
+            <h1 className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+              {cgpa}
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Scale: {gradingLabel}
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+
+        <div className="flex flex-wrap gap-3 items-center">
+          {!isPro && (
+            <Button
+              size="sm"
+              className="bg-yellow-500 hover:bg-yellow-600 text-black"
+              onClick={() => router.push("/upgrade")}
+            >
+              Upgrade to Pro
+            </Button>
+          )}
+
           <Button
             size="sm"
             variant="outline"
-            className="flex items-center gap-2 border-blue-500 text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-950"
-            onClick={() => setEditProfileModalOpen(true)}
+            onClick={() => setEditProfileOpen(true)}
           >
-            <Settings size={16} /> Edit Profile
+            <Settings size={16} className="mr-1" />
+            Profile
           </Button>
-          <EditProfileModal
-            open={editProfileModalOpen}
-            onOpenChange={setEditProfileModalOpen}
-          />
+
           <Button size="sm" variant="outline" onClick={handleExportPDF}>
             Export PDF
           </Button>
@@ -216,302 +181,146 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* GPA PANELS */}
+      {/* ===== WHAT IF + TARGET PLANNER ===== */}
       <div className="grid md:grid-cols-2 gap-6">
-        {/* What-If Panel */}
-        <div className="rounded-2xl border p-5 shadow-sm bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-700 transition-colors">
-          <WhatIfPanel gradingScale={gradingScale.points} years={safeYears} />
+        <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
+          <WhatIfPanel gradingScale={gradingScale} years={safeYears} />
         </div>
 
-        {/* AI Planner */}
-        <div className="rounded-2xl border p-5 shadow-sm bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-700 transition-colors">
+        <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
           <UngradedTargetPlanner gradingScale={gradingScale.points} />
         </div>
       </div>
 
-      {/* FILTERS */}
-      <div className="sticky top-4 z-30 flex flex-col md:flex-row gap-4 items-center rounded-2xl border p-4 shadow-sm backdrop-blur bg-white/90 border-slate-200 dark:bg-slate-900/90 dark:border-slate-700 transition-colors">
-        <Select
-          value={filterYear}
-          onValueChange={setFilterYear}
-          className="md:w-1/2 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">All Years</option>
-          {safeYears.map((year) => (
-            <option key={year.id} value={year.title}>
-              {year.title}
-            </option>
-          ))}
-        </Select>
+      {/* ===== ACADEMIC STRUCTURE ===== */}
+      <div ref={academicYearsRef} className="space-y-6">
+        {safeYears.map((year) => (
+          <div
+            key={year.id}
+            className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm p-5"
+          >
+            <h2 className="text-lg font-semibold mb-4">{year.title}</h2>
 
-        <Select
-          value={filterSemester}
-          onValueChange={setFilterSemester}
-          className="md:w-1/2 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">All Semesters</option>
-          {semesterOptions.map((sem) => (
-            <option key={sem} value={sem}>
-              {sem}
-            </option>
-          ))}
-        </Select>
+            {year.semesters.map((semester) => {
+              const semesterGPA = calculateSemesterGPA(
+                semester,
+                gradingScale
+              );
 
-        <Button
-          variant="outline"
-          className="border-blue-500 text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-950 transition-colors"
-          onClick={() => {
-            setFilterYear("");
-            setFilterSemester("");
-          }}
-        >
-          Reset Filters
-        </Button>
-      </div>
+              const expanded = expandedSemesters[semester.id];
 
-      {/* COURSES TABLE */}
-      <div className="rounded-2xl border border-blue-300 dark:border-blue-700 p-4 bg-white dark:bg-blue-950 shadow-sm transition-colors">
-        <h2 className="text-lg font-semibold mb-3 text-blue-900 dark:text-blue-100">
-          All Courses Overview
-        </h2>
+              return (
+                <div key={semester.id} className="mb-4">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">
+                      {semester.title} — GPA: {semesterGPA}
+                    </span>
 
-        {safeYears.length === 0 ? (
-          <p className="text-blue-700 dark:text-blue-300">
-            No courses added yet.
-          </p>
-        ) : filteredCourses.length === 0 ? (
-          <p className="text-blue-700 dark:text-blue-300">
-            No courses match the current filter.
-          </p>
-        ) : (
-          <div className="overflow-x-auto rounded-xl border border-blue-300 dark:border-blue-700">
-            <table className="w-full border-collapse text-sm">
-              <thead className="sticky top-0 z-10 bg-blue-200 dark:bg-blue-900 text-blue-900 dark:text-blue-100">
-                <tr>
-                  <th className="border border-blue-300 dark:border-blue-700 p-2 text-left">
-                    Year
-                  </th>
-                  <th className="border border-blue-300 dark:border-blue-700 p-2 text-left">
-                    Semester
-                  </th>
-                  <th className="border border-blue-300 dark:border-blue-700 p-2 text-left">
-                    Course
-                  </th>
-                  <th className="border border-blue-300 dark:border-blue-700 p-2 text-center">
-                    CU
-                  </th>
-                  <th className="border border-blue-300 dark:border-blue-700 p-2 text-center">
-                    Grade
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredCourses.map((course) => {
-                  const gradeColor =
-                    course.grade === "A"
-                      ? "text-emerald-600 dark:text-emerald-400 font-semibold"
-                      : course.grade === "F"
-                        ? "text-red-600 dark:text-red-400 font-semibold"
-                        : "text-blue-900 dark:text-blue-200";
-
-                  return (
-                    <tr
-                      key={course.id}
-                      className="hover:bg-blue-50 dark:hover:bg-blue-800 transition"
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => toggleSemester(semester.id)}
                     >
-                      <td className="border border-blue-300 dark:border-blue-700 p-2">
-                        {course.year}
-                      </td>
-                      <td className="border border-blue-300 dark:border-blue-700 p-2">
-                        {course.semester}
-                      </td>
-                      <td className="border border-blue-300 dark:border-blue-700 p-2">
-                        {course.name}
-                      </td>
-                      <td className="border border-blue-300 dark:border-blue-700 p-2 text-center">
-                        {course.creditUnit}
-                      </td>
-                      <td
-                        className={`border border-blue-300 dark:border-blue-700 p-2 text-center ${gradeColor}`}
-                      >
-                        {course.grade}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                      {expanded ? "Hide" : "Show"}
+                    </Button>
+                  </div>
 
-      {/* ACADEMIC YEARS COLLAPSIBLE */}
-      <Button
-        className="w-full rounded-xl font-medium transition bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
-        onClick={() => {
-          setShowAcademicYears((prev) => {
-            const next = !prev;
+                  {expanded && (
+                    <div className="mt-4 space-y-3">
+                      <AddCourseForm
+                        yearId={year.id}
+                        semesterId={semester.id}
+                        onAdd={addCourse}
+                        gradingScale={gradingScale}
+                      />
 
-            // scroll AFTER render
-            if (!prev) {
-              setTimeout(() => {
-                academicYearsRef.current?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "start",
-                });
-                academicYearsRef.current?.focus?.();
-              }, 50);
-            }
-
-            return next;
-          });
-        }}
-      >
-        {showAcademicYears ? "Hide Academic Years" : "Show Academic Years"}
-      </Button>
-
-      {showAcademicYears && (
-        <div
-          ref={academicYearsRef}
-          tabIndex={-1}
-          className="space-y-5 outline-none"
-        >
-          {safeYears.map((year) => (
-            <details
-              key={year.id}
-              className="rounded-2xl border p-5 shadow-sm transition bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-700"
-            >
-              <summary className="cursor-pointer font-semibold text-lg text-slate-900 dark:text-slate-100">
-                {year.title}
-              </summary>
-              <div className="mt-4 space-y-3">
-                {year.semesters.map((semester) => {
-                  const semesterGPA = calculateSemesterGPA(
-                    semester,
-                    gradingScale,
-                  );
-                  const isExpanded = expandedSemesters[semester.id] || false;
-
-                  return (
-                    <div
-                      key={semester.id}
-                      className="ml-4 rounded-xl border-l-4 p-4 transition border-blue-400 bg-blue-50 dark:border-blue-500 dark:bg-slate-800"
-                    >
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="font-medium text-slate-900 dark:text-slate-100">
-                          {semester.title}{" "}
-                          <span className="ml-2 text-sm text-blue-600 dark:text-blue-400">
-                            GPA: {semesterGPA}
-                          </span>
-                        </span>
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          className="border-blue-400 text-blue-600 hover:bg-blue-50 dark:border-blue-500 dark:text-blue-400 dark:hover:bg-slate-700"
-                          onClick={() => toggleSemester(semester.id)}
+                      {semester.courses.map((course) => (
+                        <div
+                          key={course.id}
+                          className="flex justify-between items-center border rounded-lg p-3 dark:border-slate-700"
                         >
-                          {isExpanded ? "Hide Courses" : "Show Courses"}
-                        </Button>
-                      </div>
+                          <span>
+                            {course.name} • {course.creditUnit} CU •{" "}
+                            <strong>{course.grade}</strong>
+                          </span>
 
-                      {isExpanded && (
-                        <div className="space-y-3">
-                          <AddCourseForm
-                            yearId={year.id}
-                            semesterId={semester.id}
-                            onAdd={addCourse}
-                            gradingScale={gradingScale}
-                          />
-                          {semester.courses.map((course) => (
-                            <div
-                              key={course.id}
-                              className="flex justify-between items-center rounded-lg border p-3 shadow-sm transition bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-700"
+                          <div className="flex gap-2">
+                            <Button
+                              size="xs"
+                              variant="outline"
+                              onClick={() =>
+                                setEditingCourse({
+                                  ...course,
+                                  yearId: year.id,
+                                  semesterId: semester.id,
+                                })
+                              }
                             >
-                              <span className="text-sm text-slate-800 dark:text-slate-200">
-                                {course.name}{" "}
-                                <span className="mx-1 text-slate-400">•</span>
-                                {course.creditUnit} CU{" "}
-                                <span className="mx-1 text-slate-400">•</span>
-                                <span className="font-semibold text-blue-600 dark:text-blue-400">
-                                  {course.grade}
-                                </span>
-                              </span>
-                              <div className="flex gap-2">
-                                <Button
-                                  size="xs"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setEditingCourse({
-                                      ...course,
-                                      yearId: year.id,
-                                      semesterId: semester.id,
-                                    });
-                                    setEditCourseModalOpen(true);
-                                  }}
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  size="xs"
-                                  variant="destructive"
-                                  onClick={() => {
-                                    setCourseToDelete({
-                                      yearId: year.id,
-                                      semesterId: semester.id,
-                                      courseId: course.id,
-                                      name: course.name,
-                                    });
-                                    setDeleteCourseModalOpen(true);
-                                  }}
-                                >
-                                  Delete
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </details>
-          ))}
-        </div>
-      )}
+                              Edit
+                            </Button>
 
-      {/* DELETE & EDIT MODALS */}
-      {courseToDelete && (
-        <ConfirmModal
-          open={deleteCourseModalOpen}
-          onOpenChange={setDeleteCourseModalOpen}
-          title="Delete Course"
-          message={`Are you sure you want to delete course ${courseToDelete.name}?`}
-          onConfirm={() => {
-            deleteCourse(
-              courseToDelete.yearId,
-              courseToDelete.semesterId,
-              courseToDelete.courseId,
-            );
-            setCourseToDelete(null);
-          }}
-        />
-      )}
+                            <Button
+                              size="xs"
+                              variant="destructive"
+                              onClick={() =>
+                                setDeleteTarget({
+                                  yearId: year.id,
+                                  semesterId: semester.id,
+                                  courseId: course.id,
+                                  name: course.name,
+                                })
+                              }
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      {/* ===== MODALS ===== */}
+      <EditProfileModal
+        open={editProfileOpen}
+        onOpenChange={setEditProfileOpen}
+      />
 
       {editingCourse && (
         <EditCourseModal
-          open={editCourseModalOpen}
-          onOpenChange={setEditCourseModalOpen}
+          open={!!editingCourse}
+          onOpenChange={() => setEditingCourse(null)}
           course={editingCourse}
-          onSave={(updatedCourse) => {
+          onSave={(updated) => {
             editCourse(
               editingCourse.yearId,
               editingCourse.semesterId,
               editingCourse.id,
-              updatedCourse,
+              updated
             );
             setEditingCourse(null);
+          }}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmModal
+          open={!!deleteTarget}
+          onOpenChange={() => setDeleteTarget(null)}
+          title="Delete Course"
+          message={`Delete ${deleteTarget.name}?`}
+          onConfirm={() => {
+            deleteCourse(
+              deleteTarget.yearId,
+              deleteTarget.semesterId,
+              deleteTarget.courseId
+            );
+            setDeleteTarget(null);
           }}
         />
       )}

@@ -1,11 +1,10 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 // ================================
 // Hydration-safe ID generator
 // ================================
-const uid = () =>
-  typeof window === "undefined" ? "temp-id" : crypto.randomUUID();
+const uid = () => crypto.randomUUID();
 
 export const useAcademicStore = create(
   persist(
@@ -16,6 +15,9 @@ export const useAcademicStore = create(
       profile: null,
       isInitialized: false,
       hasHydrated: false,
+
+      // PRO Status
+      isPro: false,
 
       setHasHydrated: () => set({ hasHydrated: true }),
 
@@ -97,10 +99,10 @@ export const useAcademicStore = create(
                             },
                           ],
                         }
-                      : sem
+                      : sem,
                   ),
                 }
-              : year
+              : year,
           ),
         })),
 
@@ -125,16 +127,16 @@ export const useAcademicStore = create(
                                       : course.creditUnit,
                                   grade:
                                     updatedCourse.grade !== undefined
-                                      ? updatedCourse.grade ?? null
+                                      ? (updatedCourse.grade ?? null)
                                       : course.grade,
                                 }
-                              : course
+                              : course,
                           ),
                         }
-                      : sem
+                      : sem,
                   ),
                 }
-              : year
+              : year,
           ),
         })),
 
@@ -149,13 +151,13 @@ export const useAcademicStore = create(
                       ? {
                           ...sem,
                           courses: sem.courses.filter(
-                            (course) => course.id !== courseId
+                            (course) => course.id !== courseId,
                           ),
                         }
-                      : sem
+                      : sem,
                   ),
                 }
-              : year
+              : year,
           ),
         })),
 
@@ -167,19 +169,48 @@ export const useAcademicStore = create(
               ? {
                   ...year,
                   semesters: year.semesters.map((sem) =>
-                    sem.id === semesterId ? { ...sem, status } : sem
+                    sem.id === semesterId ? { ...sem, status } : sem,
                   ),
                 }
-              : year
+              : year,
           ),
         })),
+
+      /* ===============================
+         PRO LOGIC
+      =============================== */
+
+      upgradeToPro: () =>
+        set({
+          isPro: true,
+        }),
+
+      downgradeFromPro: () =>
+        set({
+          isPro: false,
+        }),
+      /* ===============================
+         RESET / LOGOUT
+      =============================== */
+
+      resetAll: () =>{
+        set({
+          profile: null,
+          years: [],
+          isInitialized: false,
+          isPro: false,
+        });
+        localStorage.removeItem("universal-cgpa-storage");
+      }
     }),
+
     {
       name: "universal-cgpa-storage",
+      storage: createJSONStorage(() => localStorage),
       version: 1,
       onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated();
+        state?.setHasHydrated(true);
       },
-    }
-  )
+    },
+  ),
 );

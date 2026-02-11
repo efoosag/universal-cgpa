@@ -8,12 +8,12 @@ export default function Home() {
   const router = useRouter();
   
 
-  useEffect(() => {
-    const stored = localStorage.getItem("universal-cgpa-storage")
-    if(stored){
-      router.replace("/dashboard")
-    }
-  }, [router]);
+  // useEffect(() => {
+  //   const stored = localStorage.getItem("universal-cgpa-storage")
+  //   if(stored){
+  //     router.replace("/dashboard")
+  //   }
+  // }, [router]);
 
    return (
     <main
@@ -41,7 +41,7 @@ export default function Home() {
 
         <div className="flex justify-center gap-4">
           <Link href="/onboarding">
-            <Button size="lg" className="px-8" onClick={() => router.push("onboarding")}>
+            <Button size="lg" className="px-8">
               Get Started
             </Button>
           </Link>
@@ -112,7 +112,7 @@ export default function Home() {
           </p>
 
           <Link href="/onboarding">
-            <Button size="lg" variant="secondary" className="px-8" onClick={() => router.push("onboarding")}>
+            <Button size="lg" variant="secondary" className="px-8">
               Start Calculating
             </Button>
           </Link>
