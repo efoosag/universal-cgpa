@@ -9,6 +9,20 @@ export default function UpgradePage() {
   const router = useRouter();
   const { isPro, upgradeToPro } = useAcademicStore();
 
+  const handleUpgrade = async () => {
+    const res = await fetch("/api/create-checkout-session", {
+      method: "POST",
+    });
+
+    const data = await res.json();
+
+    const stripe = await import("@stripe/stripe-js").then((m) =>
+      m.loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY),
+    );
+
+    await stripe.redirectToCheckout({ sessionId: data.id });
+  };
+
   if (isPro) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
@@ -26,7 +40,6 @@ export default function UpgradePage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-6">
-
       {/* HERO */}
       <div className="max-w-4xl mx-auto text-center mt-12 space-y-6">
         <h1 className="text-4xl font-bold text-slate-900 dark:text-white">
@@ -34,23 +47,18 @@ export default function UpgradePage() {
         </h1>
 
         <p className="text-lg text-slate-600 dark:text-slate-400">
-          Unlock advanced academic analytics and export tools to take control
-          of your academic future.
+          Unlock advanced academic analytics and export tools to take control of
+          your academic future.
         </p>
       </div>
 
       {/* PRICING CARD */}
       <div className="max-w-md mx-auto mt-12">
         <div className="rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-700 p-8 space-y-6">
-
           <div className="text-center">
             <h2 className="text-2xl font-bold">Pro Plan</h2>
-            <p className="text-4xl font-bold text-blue-600 mt-3">
-              ₦2,000
-            </p>
-            <p className="text-sm text-slate-500">
-              One-time payment
-            </p>
+            <p className="text-4xl font-bold text-blue-600 mt-3">₦5,000</p>
+            <p className="text-sm text-slate-500">One-time payment</p>
           </div>
 
           <div className="space-y-4">
@@ -63,11 +71,7 @@ export default function UpgradePage() {
 
           <Button
             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-            onClick={() => {
-              // temporary local upgrade (replace later with Stripe)
-              upgradeToPro();
-              router.push("/dashboard");
-            }}
+            onClick={handleUpgrade}
           >
             Upgrade Now
           </Button>
@@ -85,7 +89,6 @@ export default function UpgradePage() {
         </h2>
 
         <div className="grid md:grid-cols-2 gap-6">
-
           <ComparisonCard
             title="Free Plan"
             features={[
