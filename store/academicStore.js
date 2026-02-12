@@ -16,9 +16,6 @@ export const useAcademicStore = create(
       isInitialized: false,
       hasHydrated: false,
 
-      // PRO Status
-      isPro: false,
-
       setHasHydrated: () => set({ hasHydrated: true }),
 
       // ===== ONBOARDING =====
@@ -177,19 +174,6 @@ export const useAcademicStore = create(
         })),
 
       /* ===============================
-         PRO LOGIC
-      =============================== */
-
-      upgradeToPro: () =>
-        set({
-          isPro: true,
-        }),
-
-      downgradeFromPro: () =>
-        set({
-          isPro: false,
-        }),
-      /* ===============================
          RESET / LOGOUT
       =============================== */
 
@@ -197,8 +181,7 @@ export const useAcademicStore = create(
         set({
           profile: null,
           years: [],
-          isInitialized: false,
-          isPro: false,
+          isInitialized: false,          
         });
         localStorage.removeItem("universal-cgpa-storage");
       }

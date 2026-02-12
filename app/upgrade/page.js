@@ -48,7 +48,7 @@ export default function UpgradePage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-6">
+    <main className="min-h-screen bg-linear-to-br from-blue-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-6">
       {/* HERO */}
       <div className="max-w-4xl mx-auto text-center mt-12 space-y-6">
         <h1 className="text-4xl font-bold text-slate-900 dark:text-white">
