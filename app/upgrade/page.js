@@ -10,18 +10,27 @@ export default function UpgradePage() {
   const { isPro, upgradeToPro } = useAcademicStore();
 
   const handleUpgrade = async () => {
-    const res = await fetch("/api/create-checkout-session", {
-      method: "POST",
-    });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-    const data = await res.json();
+  const res = await fetch("/api/create-checkout-session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId: user.id,
+    }),
+  });
 
-    const stripe = await import("@stripe/stripe-js").then((m) =>
-      m.loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY),
-    );
+  const data = await res.json();
 
-    await stripe.redirectToCheckout({ sessionId: data.id });
-  };
+  const stripe = await loadStripe(
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  );
+
+  await stripe.redirectToCheckout({ sessionId: data.id });
+};
+
 
   if (isPro) {
     return (
