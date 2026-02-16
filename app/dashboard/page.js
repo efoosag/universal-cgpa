@@ -29,9 +29,9 @@ export default function Dashboard() {
 
   const router = useRouter();
   const academicYearsRef = useRef(null);
+  const hasLoadedFromDB = useRef(false);
 
   const {
-    isInitialized,
     hasHydrated,
     years,
     profile,
@@ -39,25 +39,27 @@ export default function Dashboard() {
     editCourse,
     deleteCourse,
     initializeAcademicStructure,
+    setProfile,
   } = useAcademicStore();
 
+  const hydrateAcademicData = useAcademicStore((s) => s.hydrateAcademicData);
   const safeYears = Array.isArray(years) ? years : [];
-
+  console.log(safeYears);
   const gradingScaleFull =
     GRADING_SCALES[profile?.gradingScaleId] || GRADING_SCALES["ng-5"];
 
   const { label: gradingLabel, gradingScale } = gradingScaleFull;
 
   const cgpa = calculateCGPA(safeYears, gradingScale);
-
+  console.log(cgpa);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [expandedSemesters, setExpandedSemesters] = useState({});
 
-  // supabase assess
+  //supabase user update
   useEffect(() => {
-    const loadUserProfile = async () => {
+    const checkAccess = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -71,30 +73,100 @@ export default function Dashboard() {
 
       const { data: profile, error } = await supabase
         .from("profiles")
-        .select("is_pro")
+        .select(
+          "is_pro, onboarding_completed, program_years, semesters_per_year",
+        )
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
-      // 🔥 If profile does not exist, create it
-      if (error && error.code === "PGRST116") {
-        await supabase.from("profiles").insert({
-          id: user.id,
-          email: user.email,
-          is_pro: false,
-        });
-
-        setIsPro(false);
-      } else if (profile) {
-        setIsPro(profile.is_pro);
+      console.log(profile);
+      if (error) {
+        console.error("Profile fetch error:", error);
+        router.replace("/login");
+        return;
       }
 
+      // If profile missing (should not happen, but safe guard)
+      if (!profile) {
+        router.replace("/auth/callback");
+        return;
+      }
+
+      // 🔥 If onboarding not completed → go to onboarding
+      if (!profile.onboarding_completed) {
+        router.replace("/onboarding");
+        return;
+      }
+      setProfile({
+        programYears: profile.program_years,
+        semestersPerYear: profile.semesters_per_year,
+      });
+      setIsPro(profile.is_pro);
       setLoading(false);
     };
 
-    loadUserProfile();
+    checkAccess();
   }, [router]);
 
-  //supabase user update
+  // Load academic data from supabase
+  useEffect(() => {
+    if (!user) return;
+    if (!hasHydrated) return;
+    if (!profile) return;
+    if (hasLoadedFromDB.current) return;
+
+    const loadAcademicData = async () => {
+      const { data, error } = await supabase
+        .from("academic_records")
+        .select("data")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Academic fetch error:", error);
+        hasLoadedFromDB.current = true;
+        return;
+      }
+
+      if (data?.data && Array.isArray(data.data)) {
+        hydrateAcademicData(data.data);
+      } else {
+        // If no record exists, create structure from profile
+        if (profile.programYears && profile.semestersPerYear) {
+          console.log(profile);
+          initializeAcademicStructure(
+            profile.programYears,
+            profile.semestersPerYear,
+          );
+        }
+      }
+
+      hasLoadedFromDB.current = true;
+    };
+
+    loadAcademicData();
+  }, [user, hasHydrated, profile]);
+
+  // Auto save when years changes
+  useEffect(() => {
+    if (!user) return;
+    if (!hasHydrated) return;
+    if (!profile) return;
+    if (!hasLoadedFromDB.current) return;
+
+    const saveAcademicData = async () => {
+      await supabase.from("academic_records").upsert({
+        user_id: user.id,
+        data: years,
+        updated_at: new Date(),
+      });
+    };
+
+    const timeout = setTimeout(saveAcademicData, 1000);
+    return () => clearTimeout(timeout);
+  }, [years, user, hasHydrated]);
+
+  // realtime pro status update
   useEffect(() => {
     if (!user) return;
 
@@ -119,20 +191,6 @@ export default function Dashboard() {
       supabase.removeChannel(channel);
     };
   }, [user]);
-
-  // Redirect protection
-  useEffect(() => {
-    if (!hasHydrated) return;
-    if (!isInitialized) router.replace("/onboarding");
-  }, [hasHydrated, isInitialized, router]);
-
-  if (!hasHydrated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading dashboard...
-      </div>
-    );
-  }
 
   const toggleSemester = (id) => {
     setExpandedSemesters((prev) => ({
@@ -201,116 +259,150 @@ export default function Dashboard() {
     doc.save("CGPA_Report.pdf");
   };
 
-  if (loading) return null;
+  console.log({
+  loading,
+  hasHydrated,
+  profile,
+  years,
+  safeYears
+})
+
+  if (loading || !hasHydrated) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center 
+bg-linear-to-br from-blue-50 via-white to-slate-100 
+dark:from-slate-950 dark:via-slate-900 dark:to-blue-950"
+      >
+        <div
+          className="px-6 py-4 rounded-2xl 
+  bg-white dark:bg-slate-900 
+  border border-blue-100 dark:border-slate-700 
+  shadow-md text-blue-600 dark:text-blue-400 
+  font-medium"
+        >
+          Loading dashboard...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-linear-to-br from-blue-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-6 space-y-8">
       {/* ===== HEADER SUMMARY ===== */}
-      <div className="group rounded-2xl bg-white dark:bg-slate-900 
+      <div
+        className="group rounded-2xl bg-white dark:bg-slate-900 
 border border-slate-200 dark:border-slate-700 
 shadow-sm hover:shadow-lg 
 transition-all duration-300 
 hover:-translate-y-1 
-p-6 flex flex-col md:flex-row justify-between gap-6">
-
-  {/* ===== GPA SUMMARY ===== */}
-  <div className="flex items-center gap-4">
-    <div className="p-3 rounded-xl 
+p-6 flex flex-col md:flex-row justify-between gap-6"
+      >
+        {/* ===== GPA SUMMARY ===== */}
+        <div className="flex items-center gap-4">
+          <div
+            className="p-3 rounded-xl 
       bg-blue-100 dark:bg-blue-950 
       text-blue-600 dark:text-blue-400
       transition-all duration-300
-      group-hover:scale-105">
-      <GraduationCap size={28} />
-    </div>
+      group-hover:scale-105"
+          >
+            <GraduationCap size={28} />
+          </div>
 
-    <div>
-      <p className="text-sm text-slate-500 dark:text-slate-400">
-        Cumulative GPA
-      </p>
+          <div>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Cumulative GPA
+            </p>
 
-      <h1 className="text-4xl font-bold 
+            <h1
+              className="text-4xl font-bold 
         text-blue-600 dark:text-blue-400
         transition-all duration-300
-        group-hover:tracking-wide">
-        {cgpa}
-      </h1>
+        group-hover:tracking-wide"
+            >
+              {cgpa}
+            </h1>
 
-      <p className="text-xs text-slate-500 dark:text-slate-400">
-        Scale: {gradingLabel}
-      </p>
-    </div>
-  </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Scale: {gradingLabel}
+            </p>
+          </div>
+        </div>
 
-  {/* ===== USER INFO ===== */}
-  <div className="flex flex-col md:flex-row md:items-center gap-4">
-    <div>
-      <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-        Welcome, {user?.email}
-      </h1>
+        {/* ===== USER INFO ===== */}
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+              Welcome, {user?.email}
+            </h1>
 
-      {isPro ? (
-        <span className="mt-2 inline-block rounded-full 
+            {isPro ? (
+              <span
+                className="mt-2 inline-block rounded-full 
           bg-green-100 text-green-700 
           dark:bg-green-900/40 dark:text-green-400 
-          px-3 py-1 text-sm">
-          PRO Member
-        </span>
-      ) : (
-        <span className="mt-2 inline-block rounded-full 
+          px-3 py-1 text-sm"
+              >
+                PRO Member
+              </span>
+            ) : (
+              <span
+                className="mt-2 inline-block rounded-full 
           bg-slate-200 text-slate-700 
           dark:bg-slate-700 dark:text-slate-300 
-          px-3 py-1 text-sm">
-          Free Plan
-        </span>
-      )}
-    </div>
+          px-3 py-1 text-sm"
+              >
+                Free Plan
+              </span>
+            )}
+          </div>
 
-    {!isPro && (
-      <Button
-        size="sm"
-        className="bg-blue-600 hover:bg-blue-700 text-white transition-all duration-200"
-        onClick={() => router.push("/upgrade")}
-      >
-        Upgrade to Pro
-      </Button>
-    )}
-  </div>
+          {!isPro && (
+            <Button
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white transition-all duration-200"
+              onClick={() => router.push("/upgrade")}
+            >
+              Upgrade to Pro
+            </Button>
+          )}
+        </div>
 
-  {/* ===== ACTION BUTTONS ===== */}
-  <div className="flex flex-wrap gap-3 items-center">
-    <Button
-      size="sm"
-      variant="outline"
-      className="hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-      onClick={() => setEditProfileOpen(true)}
-    >
-      <Settings size={16} className="mr-1" />
-      Profile
-    </Button>
+        {/* ===== ACTION BUTTONS ===== */}
+        <div className="flex flex-wrap gap-3 items-center">
+          <Button
+            size="sm"
+            variant="outline"
+            className="hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            onClick={() => setEditProfileOpen(true)}
+          >
+            <Settings size={16} className="mr-1" />
+            Profile
+          </Button>
 
-    <Button
-      size="sm"
-      variant="outline"
-      className="hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-      onClick={handleExportPDF}
-    >
-      Export PDF
-    </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            onClick={handleExportPDF}
+          >
+            Export PDF
+          </Button>
 
-    <Button
-      size="sm"
-      variant="outline"
-      className="hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-      onClick={handleExportExcel}
-    >
-      Export Excel
-    </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            onClick={handleExportExcel}
+          >
+            Export Excel
+          </Button>
 
-    <ThemeToggle />
-    <LogoutButton />
-  </div>
-</div>
-
+          <ThemeToggle />
+          <LogoutButton />
+        </div>
+      </div>
 
       {/* ===== WHAT IF + TARGET PLANNER ===== */}
       <div className="grid md:grid-cols-2 gap-6">
@@ -384,6 +476,20 @@ p-6 flex flex-col md:flex-row justify-between gap-6">
 
       {/* ===== ACADEMIC STRUCTURE ===== */}
       <div ref={academicYearsRef} className="space-y-6">
+        {safeYears.length === 0 && (
+          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm p-6 text-center">
+            <h3 className="text-lg font-semibold mb-2">
+              No academic structure found
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+              Set up your academic years to start tracking your CGPA.
+            </p>
+            <Button onClick={() => router.push("/onboarding")}>
+              Go to Onboarding
+            </Button>
+          </div>
+        )}
+
         {safeYears.map((year) => (
           <div
             key={year.id}

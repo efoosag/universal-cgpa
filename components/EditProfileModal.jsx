@@ -23,8 +23,8 @@ export default function EditProfileModal({ open, onOpenChange }) {
     profile?.programYears !== form.programYears ||
     profile?.semestersPerYear !== form.semestersPerYear;
 
-  const saveProfile = () => {
-    editProfile({
+  const saveProfile = async () => {
+    await editProfile({
       ...form,
       gradingScaleId: form.gradingScaleId || "ng-5",
     });

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { supabase } from "@/lib/supabaseClient";
 
 // ================================
 // Hydration-safe ID generator
@@ -29,30 +30,57 @@ export const useAcademicStore = create(
         }),
 
       // ===== PROFILE EDIT =====
-      editProfile: (newProfile) =>
-        set((state) => {
-          const oldProfile = state.profile || {};
+      editProfile: async (newProfile) => {
+        const { profile } = get();
 
-          const structureChanged =
-            oldProfile.programYears !== newProfile.programYears ||
-            oldProfile.semestersPerYear !== newProfile.semestersPerYear;
+        const oldProfile = profile || {};
 
-          return {
-            profile: {
-              ...oldProfile,
-              ...newProfile,
-              gradingScaleId:
-                newProfile.gradingScaleId ??
-                oldProfile.gradingScaleId ??
-                "ng-5",
-            },
-            years: structureChanged ? [] : state.years,
-            isInitialized: true,
-          };
-        }),
+        const structureChanged =
+          oldProfile.programYears !== newProfile.programYears ||
+          oldProfile.semestersPerYear !== newProfile.semestersPerYear;
+
+        // Get current user
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) return;
+
+        // 1️⃣ Update database first
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            country: newProfile.country,
+            university: newProfile.university,
+            program: newProfile.program,
+            program_years: newProfile.programYears,
+            semesters_per_year: newProfile.semestersPerYear,
+            grading_scale_id:
+              newProfile.gradingScaleId ?? oldProfile.gradingScaleId ?? "ng-5",
+            updated_at: new Date(),
+          })
+          .eq("id", user.id);
+
+        if (error) {
+          console.error("Profile update failed:", error);
+          return;
+        }
+
+        // 2️⃣ Then update Zustand state
+        set({
+          profile: {
+            ...oldProfile,
+            ...newProfile,
+            gradingScaleId:
+              newProfile.gradingScaleId ?? oldProfile.gradingScaleId ?? "ng-5",
+          },
+          years: structureChanged ? [] : get().years,
+          isInitialized: true,
+        });
+      },
 
       // ===== STRUCTURE INITIALIZATION =====
-      initializeAcademicStructure: (programYears, semestersPerYear) =>
+      initializeAcademicStructure: (programYears = 0, semestersPerYear = 0) =>
         set(() => ({
           years: Array.from({ length: programYears }, (_, y) => ({
             id: uid(),
@@ -64,6 +92,13 @@ export const useAcademicStore = create(
               courses: [],
             })),
           })),
+          isInitialized: true,
+        })),
+
+      hydrateAcademicData: (yearsFromDB) =>
+        set(() => ({
+          years: Array.isArray(yearsFromDB) ? yearsFromDB : [],
+          isInitialized: true,
         })),
 
       resetAcademicData: () =>
@@ -177,14 +212,14 @@ export const useAcademicStore = create(
          RESET / LOGOUT
       =============================== */
 
-      resetAll: () =>{
+      resetAll: () => {
         set({
           profile: null,
           years: [],
-          isInitialized: false,          
+          isInitialized: false,
         });
         localStorage.removeItem("universal-cgpa-storage");
-      }
+      },
     }),
 
     {
