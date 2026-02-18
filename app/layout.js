@@ -4,7 +4,7 @@ import "./globals.css";
 
 export default function RootLayout({ children }) {
   return (
-    <html suppressHydrationWarning ={true}>
+    <html>
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <ThemeModeProvider>{children}</ThemeModeProvider>

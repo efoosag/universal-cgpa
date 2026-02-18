@@ -11,18 +11,14 @@ import { GRADING_SCALES } from "@/lib/grading";
 export default function OnboardingPage() {
   const router = useRouter();
 
-  const {
-    setProfile,
-    initializeAcademicStructure,
-    hasHydrated,
-    isInitialized,
+  const {     
+    initializeAcademicStructure,      
   } = useAcademicStore();
 
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!hasHydrated) return;
-
+    
     const checkUser = async () => {
       const {
         data: { user },
@@ -37,7 +33,7 @@ export default function OnboardingPage() {
         .from("profiles")
         .select("onboarding_completed")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       if (profile?.onboarding_completed) {
         router.replace("/dashboard");
@@ -45,7 +41,8 @@ export default function OnboardingPage() {
     };
 
     checkUser();
-  }, [hasHydrated, isInitialized, router]);
+  }, [router]);
+
 
   const [form, setForm] = useState({
     country: "",
@@ -58,7 +55,7 @@ export default function OnboardingPage() {
 
   const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  async function handleSubmit() {
+async function handleSubmit() {
   if (
     !form.country ||
     !form.university ||
@@ -80,19 +77,20 @@ export default function OnboardingPage() {
     return;
   }
 
-  // 1️⃣ Update profile table
+  // 1️⃣ Update profile
   const { error } = await supabase
-    .from("profiles")
-    .update({
-      country: form.country,
-      university: form.university,
-      program: form.program,
-      program_years: Number(form.programYears),
-      semesters_per_year: form.semestersPerYear,
-      grading_scale_id: form.gradingScaleId,
-      onboarding_completed: true,
-    })
-    .eq("id", user.id);
+  .from("profiles")
+  .upsert({
+    id: user.id,
+    country: form.country,
+    university: form.university,
+    program: form.program,
+    program_years: Number(form.programYears),
+    semesters_per_year: form.semestersPerYear,
+    grading_scale_id: form.gradingScaleId,
+    onboarding_completed: true,
+  });
+
 
   if (error) {
     alert(error.message);
@@ -100,54 +98,19 @@ export default function OnboardingPage() {
     return;
   }
 
-  // 2️⃣ Generate structure ONCE
-  const academicStructure = Array.from(
-    { length: Number(form.programYears) },
-    (_, y) => ({
-      id: crypto.randomUUID(),
-      title: `Year ${y + 1}`,
-      semesters: Array.from({ length: form.semestersPerYear }, (_, s) => ({
-        id: crypto.randomUUID(),
-        title: `Semester ${s + 1}`,
-        status: "planned",
-        courses: [],
-      })),
-    }),
+ 
+  // 3️⃣ Generate relational structure
+  await initializeAcademicStructure(
+    Number(form.programYears),
+    form.semestersPerYear
   );
 
-  // 3️⃣ Save ONE row per user
-  const { error: recordError } = await supabase
-    .from("academic_records")
-    .upsert({
-      user_id: user.id,
-      data: academicStructure,
-      updated_at: new Date().toISOString(),
-    });
-
-  if (recordError) {
-    alert(recordError.message);
-    setLoading(false);
-    return;
-  }
-
-  // 4️⃣ Update Zustand profile
-  setProfile({
-    country: form.country,
-    university: form.university,
-    program: form.program,
-    programYears: Number(form.programYears),
-    semestersPerYear: form.semestersPerYear,
-    gradingScaleId: form.gradingScaleId,
-  });
-
-  // 5️⃣ Hydrate Zustand using SAME structure
-  useAcademicStore.getState().hydrateAcademicData(academicStructure);
-  
   router.push("/dashboard");
 }
 
 
-  if (!hasHydrated) return null;
+
+  if (loading) return null;
 
   return (
     <main

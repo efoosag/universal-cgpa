@@ -26,32 +26,25 @@ export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [isPro, setIsPro] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
 
   const router = useRouter();
   const academicYearsRef = useRef(null);
-  const hasLoadedFromDB = useRef(false);
 
-  const {
-    hasHydrated,
-    years,
-    profile,
-    addCourse,
-    editCourse,
-    deleteCourse,
-    initializeAcademicStructure,
-    setProfile,
-  } = useAcademicStore();
+  const { years, profile, addCourse, editCourse, deleteCourse, fetchProfile } =
+    useAcademicStore();
 
-  const hydrateAcademicData = useAcademicStore((s) => s.hydrateAcademicData);
+  const { fetchAcademicData } = useAcademicStore();
+
   const safeYears = Array.isArray(years) ? years : [];
-  console.log(safeYears);
+
   const gradingScaleFull =
     GRADING_SCALES[profile?.gradingScaleId] || GRADING_SCALES["ng-5"];
 
   const { label: gradingLabel, gradingScale } = gradingScaleFull;
 
   const cgpa = calculateCGPA(safeYears, gradingScale);
-  console.log(cgpa);
+
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -97,10 +90,6 @@ export default function Dashboard() {
         router.replace("/onboarding");
         return;
       }
-      setProfile({
-        programYears: profile.program_years,
-        semestersPerYear: profile.semesters_per_year,
-      });
       setIsPro(profile.is_pro);
       setLoading(false);
     };
@@ -108,63 +97,21 @@ export default function Dashboard() {
     checkAccess();
   }, [router]);
 
-  // Load academic data from supabase
+  // fetch academic record
   useEffect(() => {
     if (!user) return;
-    if (!hasHydrated) return;
-    if (!profile) return;
-    if (hasLoadedFromDB.current) return;
 
-    const loadAcademicData = async () => {
-      const { data, error } = await supabase
-        .from("academic_records")
-        .select("data")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (error) {
-        console.error("Academic fetch error:", error);
-        hasLoadedFromDB.current = true;
-        return;
-      }
-
-      if (data?.data && Array.isArray(data.data)) {
-        hydrateAcademicData(data.data);
-      } else {
-        // If no record exists, create structure from profile
-        if (profile.programYears && profile.semestersPerYear) {
-          console.log(profile);
-          initializeAcademicStructure(
-            profile.programYears,
-            profile.semestersPerYear,
-          );
-        }
-      }
-
-      hasLoadedFromDB.current = true;
+    const load = async () => {
+      await fetchAcademicData();
+      setDataLoading(false);
     };
 
-    loadAcademicData();
-  }, [user, hasHydrated, profile]);
+    load();
+  }, [user]);
 
-  // Auto save when years changes
   useEffect(() => {
-    if (!user) return;
-    if (!hasHydrated) return;
-    if (!profile) return;
-    if (!hasLoadedFromDB.current) return;
-
-    const saveAcademicData = async () => {
-      await supabase.from("academic_records").upsert({
-        user_id: user.id,
-        data: years,
-        updated_at: new Date(),
-      });
-    };
-
-    const timeout = setTimeout(saveAcademicData, 1000);
-    return () => clearTimeout(timeout);
-  }, [years, user, hasHydrated]);
+    fetchProfile();
+  }, []);
 
   // realtime pro status update
   useEffect(() => {
@@ -260,14 +207,13 @@ export default function Dashboard() {
   };
 
   console.log({
-  loading,
-  hasHydrated,
-  profile,
-  years,
-  safeYears
-})
+    loading,
+    profile,
+    years,
+    safeYears,
+  });
 
-  if (loading || !hasHydrated) {
+  if (loading || dataLoading) {
     return (
       <div
         className="min-h-screen flex items-center justify-center 
@@ -590,12 +536,7 @@ p-6 flex flex-col md:flex-row justify-between gap-6"
           onOpenChange={() => setEditingCourse(null)}
           course={editingCourse}
           onSave={(updated) => {
-            editCourse(
-              editingCourse.yearId,
-              editingCourse.semesterId,
-              editingCourse.id,
-              updated,
-            );
+            editCourse(editingCourse.id, updated);
             setEditingCourse(null);
           }}
         />
@@ -607,13 +548,9 @@ p-6 flex flex-col md:flex-row justify-between gap-6"
           onOpenChange={() => setDeleteTarget(null)}
           title="Delete Course"
           message={`Delete ${deleteTarget.name}?`}
-          onConfirm={() => {
-            deleteCourse(
-              deleteTarget.yearId,
-              deleteTarget.semesterId,
-              deleteTarget.courseId,
-            );
-            setDeleteTarget(null);
+          onConfirm={async () => {
+            await deleteCourse(deleteTarget.courseId); // await ensures deletion
+            setDeleteTarget(null); // close modal
           }}
         />
       )}

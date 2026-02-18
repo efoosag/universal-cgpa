@@ -21,8 +21,7 @@ export default function EditCourseModal({
   const [code, setCode] = useState("");
   const [creditUnit, setCreditUnit] = useState("");
   const [grade, setGrade] = useState("");
-  const [isRetake, setIsRetake] = useState(false);
-
+  const [isRetake, setIsRetake] = useState(false);  
   useEffect(() => {
     if (course) {
       setName(course.name || "");
@@ -37,8 +36,9 @@ export default function EditCourseModal({
 
   const handleSave = () => {
     if (isDisabled) return;
-
+    
     onSave({
+      id: course.id,
       name: name.trim(),
       code: code.trim(),
       creditUnit: Number(creditUnit),

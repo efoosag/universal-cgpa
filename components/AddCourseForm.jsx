@@ -25,7 +25,7 @@ export default function AddCourseForm({
     e.preventDefault();
     if (isDisabled) return;
 
-    onAdd(yearId, semesterId, {
+    onAdd(semesterId, {
       name: name.trim(),
       code: code.trim(),
       creditUnit: Number(creditUnit),

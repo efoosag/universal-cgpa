@@ -10,10 +10,11 @@ import { GRADING_SCALES } from "@/lib/grading";
 export default function EditProfileModal({ open, onOpenChange }) {
   const router = useRouter();
   const { profile, editProfile } = useAcademicStore();
-
   const [form, setForm] = useState(profile || {});
   const [showWarning, setShowWarning] = useState(false);
+  const [saving, setSaving] = useState(false);
 
+  // Sync form when modal opens
   useEffect(() => {
     setForm(profile || {});
     setShowWarning(false);
@@ -24,6 +25,8 @@ export default function EditProfileModal({ open, onOpenChange }) {
     profile?.semestersPerYear !== form.semestersPerYear;
 
   const saveProfile = async () => {
+    setSaving(true);
+
     await editProfile({
       ...form,
       gradingScaleId: form.gradingScaleId || "ng-5",
@@ -33,6 +36,8 @@ export default function EditProfileModal({ open, onOpenChange }) {
     onOpenChange(false);
 
     if (structureChanged) router.refresh();
+
+    setSaving(false);
   };
 
   return (
@@ -41,7 +46,7 @@ export default function EditProfileModal({ open, onOpenChange }) {
 
         {/* Academic Identity */}
         <section className="space-y-4">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+          <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300">
             Academic Identity
           </h3>
 
@@ -51,12 +56,10 @@ export default function EditProfileModal({ open, onOpenChange }) {
               onChange={(e) => setForm({ ...form, country: e.target.value })}
               placeholder="Country"
               className="w-full rounded-md border p-2
-                bg-white text-slate-900
-                dark:bg-neutral-900 dark:text-slate-100 dark:border-neutral-700"
+                border-blue-300 bg-blue-50 text-blue-900
+                dark:bg-blue-950 dark:text-blue-100 dark:border-blue-700"
             />
-            <p className="text-xs text-slate-500 mt-1">
-              Country of Study.
-            </p>
+            <p className="text-xs text-blue-600 mt-1">Country of Study.</p>
           </div>
 
           <div>
@@ -65,12 +68,10 @@ export default function EditProfileModal({ open, onOpenChange }) {
               onChange={(e) => setForm({ ...form, university: e.target.value })}
               placeholder="University"
               className="w-full rounded-md border p-2
-                bg-white text-slate-900
-                dark:bg-neutral-900 dark:text-slate-100 dark:border-neutral-700"
+                border-blue-300 bg-blue-50 text-blue-900
+                dark:bg-blue-950 dark:text-blue-100 dark:border-blue-700"
             />
-            <p className="text-xs text-slate-500 mt-1">
-              Univeersity of Study.
-            </p>
+            <p className="text-xs text-blue-600 mt-1">University of Study.</p>
           </div>
 
           <div>
@@ -79,10 +80,10 @@ export default function EditProfileModal({ open, onOpenChange }) {
               onChange={(e) => setForm({ ...form, program: e.target.value })}
               placeholder="Program of Study"
               className="w-full rounded-md border p-2
-                bg-white text-slate-900
-                dark:bg-neutral-900 dark:text-slate-100 dark:border-neutral-700"
+                border-blue-300 bg-blue-50 text-blue-900
+                dark:bg-blue-950 dark:text-blue-100 dark:border-blue-700"
             />
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-blue-600 mt-1">
               Example: Computer Science, Law, Medicine.
             </p>
           </div>
@@ -90,7 +91,7 @@ export default function EditProfileModal({ open, onOpenChange }) {
 
         {/* Program Structure */}
         <section className="space-y-4">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+          <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300">
             Program Structure
           </h3>
 
@@ -101,18 +102,13 @@ export default function EditProfileModal({ open, onOpenChange }) {
                 min={1}
                 value={form.programYears || 1}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    programYears: Math.max(1, Number(e.target.value)),
-                  })
+                  setForm({ ...form, programYears: Math.max(1, Number(e.target.value)) })
                 }
                 className="w-full rounded-md border p-2
-                  bg-white text-slate-900
-                  dark:bg-neutral-900 dark:text-slate-100 dark:border-neutral-700"
+                  border-blue-300 bg-blue-50 text-blue-900
+                  dark:bg-blue-950 dark:text-blue-100 dark:border-blue-700"
               />
-              <p className="text-xs text-slate-500 mt-1">
-                Total duration of your academic program.
-              </p>
+              <p className="text-xs text-blue-600 mt-1">Total duration of your academic program.</p>
             </div>
 
             <div>
@@ -124,46 +120,30 @@ export default function EditProfileModal({ open, onOpenChange }) {
                 onChange={(e) =>
                   setForm({
                     ...form,
-                    semestersPerYear: Math.min(
-                      3,
-                      Math.max(2, Number(e.target.value)),
-                    ),
+                    semestersPerYear: Math.min(3, Math.max(2, Number(e.target.value))),
                   })
                 }
                 className="w-full rounded-md border p-2
-                  bg-white text-slate-900
-                  dark:bg-neutral-900 dark:text-slate-100 dark:border-neutral-700"
+                  border-blue-300 bg-blue-50 text-blue-900
+                  dark:bg-blue-950 dark:text-blue-100 dark:border-blue-700"
               />
-              <p className="text-xs text-slate-500 mt-1">
-                Most universities use 2 semesters per year.
-              </p>
+              <p className="text-xs text-blue-600 mt-1">Most universities use 2 semesters per year.</p>
             </div>
           </div>
         </section>
 
-        {/* Grading Scale (EMPHASIZED) */}
-        <section className="
-          rounded-xl border border-blue-200
-          bg-blue-50 p-4
-          dark:bg-blue-950 dark:border-blue-800
-        ">
-          <h3 className="text-sm font-semibold text-blue-700 dark:text-blue-300">
-            Grading Scale
-          </h3>
-
-          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-            This determines how GPA and CGPA are calculated.
+        {/* Grading Scale */}
+        <section className="rounded-xl border border-blue-300 bg-blue-100 p-4 dark:bg-blue-950 dark:border-blue-700">
+          <h3 className="text-sm font-semibold text-blue-700 dark:text-blue-300">Grading Scale</h3>
+          <p className="text-xs text-blue-600 mt-1">
+            Determines how GPA and CGPA are calculated.
           </p>
-
           <select
             value={form.gradingScaleId || "ng-5"}
-            onChange={(e) =>
-              setForm({ ...form, gradingScaleId: e.target.value })
-            }
+            onChange={(e) => setForm({ ...form, gradingScaleId: e.target.value })}
             className="mt-3 w-full rounded-md border p-2
-              bg-white text-slate-900
-              focus:ring-2 focus:ring-blue-500
-              dark:bg-neutral-900 dark:text-slate-100 dark:border-neutral-700"
+              border-blue-300 bg-blue-50 text-blue-900 focus:ring-2 focus:ring-blue-500
+              dark:bg-blue-950 dark:text-blue-100 dark:border-blue-700"
           >
             {Object.entries(GRADING_SCALES).map(([key, scale]) => (
               <option key={key} value={key}>
@@ -171,46 +151,46 @@ export default function EditProfileModal({ open, onOpenChange }) {
               </option>
             ))}
           </select>
-
-          <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-            Changing this recalculates GPA but keeps all your courses intact.
+          <p className="text-xs text-blue-600 mt-2">
+            Changing this recalculates GPA but keeps all courses intact.
           </p>
         </section>
 
-        {/* Warning */}
+        {/* Warning (blue theme) */}
         {showWarning && (
-          <div className="
-            rounded-xl border border-red-300
-            bg-red-50 p-4
-            dark:bg-red-950 dark:border-red-800
-          ">
-            <p className="font-semibold text-red-700 dark:text-red-400">
-              Structural Change Detected
-            </p>
-            <p className="text-sm text-red-600 dark:text-red-300 mt-1">
+          <div className="rounded-xl border border-blue-300 bg-blue-50 p-4 dark:bg-blue-950 dark:border-blue-700">
+            <p className="font-semibold text-blue-800 dark:text-blue-300">Structural Change Detected</p>
+            <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
               Changing program years or semesters will reset all academic data.
             </p>
-
             <div className="flex gap-3 mt-4">
-              <Button variant="destructive" onClick={saveProfile}>
+              <Button
+                variant="destructive"
+                onClick={saveProfile}
+                disabled={saving}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
                 Continue Anyway
               </Button>
-              <Button variant="outline" onClick={() => setShowWarning(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowWarning(false)}
+                className="text-blue-700 border-blue-300 hover:bg-blue-50"
+              >
                 Go Back
               </Button>
             </div>
           </div>
         )}
 
-        {/* Save */}
+        {/* Save Button */}
         {!showWarning && (
           <Button
             className="w-full bg-blue-600 hover:bg-blue-700"
-            onClick={() =>
-              structureChanged ? setShowWarning(true) : saveProfile()
-            }
+            onClick={() => (structureChanged ? setShowWarning(true) : saveProfile())}
+            disabled={saving}
           >
-            Save Profile Changes
+            {saving ? "Saving..." : "Save Profile Changes"}
           </Button>
         )}
       </div>
