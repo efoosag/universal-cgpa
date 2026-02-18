@@ -295,6 +295,43 @@ export const useAcademicStore = create((set, get) => ({
     return true;
   },
 
+  // Bulk Courses Upload
+  bulkInsertCourses: async (courses, semesterId) => {
+    if (!semesterId) {
+      return { error: "No semester selected." };
+    }
+
+    if (!courses || courses.length === 0) {
+      return { error: "No courses provided." };
+    }
+
+    const mapped = courses
+      .map((c) => ({
+        semester_id: semesterId,
+        name: c["Course Name"]?.trim(),
+        code: c["Course Code"]?.trim() || "",
+        credit_unit: Number(c["Credit Units"]) || 0,
+        grade: c["Grade"]?.toUpperCase() || null,
+        is_retake: c["Is Retake"] === true || c["Is Retake"] === "TRUE",
+      }))
+      .filter((c) => c.name && c.credit_unit > 0);
+
+    if (mapped.length === 0) {
+      return { error: "No valid courses found." };
+    }
+
+    const { error } = await supabase.from("courses").insert(mapped);
+
+    if (error) {
+      console.error(error);
+      return { error: error.message };
+    }
+
+    await get().fetchAcademicData();
+
+    return { success: true };
+  },
+
   // =========================
   // UPDATE SEMESTER STATUS
   // =========================

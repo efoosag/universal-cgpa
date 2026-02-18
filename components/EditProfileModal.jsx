@@ -42,7 +42,7 @@ export default function EditProfileModal({ open, onOpenChange }) {
 
   return (
     <Modal open={open} onOpenChange={onOpenChange} title="Edit Academic Profile">
-      <div className="space-y-6">
+      <div className="space-y-2 scrollbar-thin scrollbar-thumb-blue-400 overflow-y-auto max-h-[80vh] p-2">
 
         {/* Academic Identity */}
         <section className="space-y-4">
