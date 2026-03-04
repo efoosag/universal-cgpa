@@ -334,9 +334,12 @@ export default function Dashboard() {
                           key={course.id}
                           className="flex justify-between items-center p-3 border rounded-lg"
                         >
-                          <span>
-                            {course.name} • {course.creditUnit} CU •{" "}
-                            <strong>{course.grade}</strong>
+                          <span className="flex grow text-sm text-blue-800 dark:text-blue-300">
+                            <span className="flex-1">{course.name}</span><span className="flex-1">{course.creditUnit} CU
+                            </span> 
+                            <strong className="flex-1 font-semibold text-blue-900 dark:text-blue-100">
+                              {course.grade}
+                            </strong>
                           </span>
 
                           <div className="flex gap-2">
